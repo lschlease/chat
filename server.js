@@ -20,7 +20,7 @@ io.on('connection', (socket) => {
   socket.on('message', (data) => {
     // 模拟后端处理逻辑
     const response = {
-      text: `收到您的消息：${data.text}`,
+      text: ``,
       score: Math.floor(Math.random() * 100),
       spiderData: [
         { name: '能力A', value: Math.floor(Math.random() * 100) },

@@ -1,80 +1,104 @@
-.chat-container {
-  padding: 20px;
-  max-width: 800px;
-  margin: 0 auto;
-  background-color: #f5f5f5;
+body {
+  margin: 0;
+  padding: 0;
+  background-color: #f0f2f5;
   min-height: 100vh;
+  overflow: hidden;
+}
+
+.chat-container {
+  padding: 0;
+  max-width: 1000px;
+  margin: 0 auto;
+  background-color: #f0f2f5;
+  height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: 128px; /* 为输入框留出空间 */
 }
 
 .message-list {
-  margin-bottom: 20px;
-  max-height: 60vh;
+  flex: 1;
   overflow: auto;
-  padding: 16px;
+  padding: 24px;
   background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  margin: 48px 24px 0 24px;
+  max-height: calc(100vh - 140px); /* 减去输入框的高度和间距 */
 }
 
 .user-message {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   background-color: #e6f7ff;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .system-message {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   background-color: #fff;
-  border-radius: 8px;
-  padding: 12px;
+  border-radius: 12px;
+  padding: 20px;
   border: 1px solid #f0f0f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .message-input-container {
+  position: fixed;
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: calc(100% - 48px);
+  max-width: 952px;
   background-color: #fff;
-  padding: 16px;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  z-index: 1000;
 }
 
 .preview-container {
-  margin-bottom: 12px;
-  padding: 8px;
-  background-color: #fafafa;
-  border-radius: 4px;
-}
-
-.preview-image {
-  max-height: 200px;
-  border-radius: 4px;
-  object-fit: contain;
-}
-
-.audio-player {
-  width: 100%;
-  border-radius: 4px;
-}
-
-.evaluation-card {
-  background-color: #f5f5f5;
-  border-radius: 8px;
+  margin-bottom: 16px;
   padding: 12px;
-  margin-top: 8px;
-}
-
-.spider-chart {
-  height: 300px;
-  margin: 16px 0;
-  padding: 16px;
   background-color: #fafafa;
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
+.preview-image {
+  max-height: 240px;
+  border-radius: 8px;
+  object-fit: contain;
+}
+
+.audio-player {
+  width: 100%;
+  border-radius: 8px;
+}
+
+.evaluation-card {
+  background-color: #fafafa;
+  border-radius: 12px;
+  padding: 16px;
+  margin-top: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.spider-chart {
+  height: 360px;
+  margin: 24px 0;
+  padding: 24px;
+  background-color: #fafafa;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
 .button-group {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .primary-button {
@@ -86,22 +110,23 @@
 }
 
 .score-container {
-  margin-top: 16px;
-  padding: 16px;
+  margin-top: 24px;
+  padding: 24px;
   background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
-  border-radius: 8px;
+  border-radius: 16px;
   color: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .score-title {
-  font-size: 18px;
+  font-size: 20px;
   font-weight: bold;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   text-align: center;
 }
 
 .score-value {
-  font-size: 36px;
+  font-size: 48px;
   font-weight: bold;
   text-align: center;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
@@ -109,17 +134,17 @@
 
 /* 滚动条样式 */
 .message-list::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .message-list::-webkit-scrollbar-track {
   background: #f1f1f1;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .message-list::-webkit-scrollbar-thumb {
   background: #888;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 .message-list::-webkit-scrollbar-thumb:hover {
