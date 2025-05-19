@@ -24,8 +24,9 @@ const SystemResponse = ({ content, score, spiderData }) => {
         />
       </div>
       {score && (
-        <div style={{ marginTop: 16 }}>
-          <h4 style={{ margin: 0 }}>得分：{score}</h4>
+        <div className="score-container">
+          <div className="score-title">AI 评分</div>
+          <div className="score-value">{score}</div>
         </div>
       )}
       {spiderData && (

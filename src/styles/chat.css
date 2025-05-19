@@ -66,6 +66,10 @@
 .spider-chart {
   height: 300px;
   margin: 16px 0;
+  padding: 16px;
+  background-color: #fafafa;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .button-group {
@@ -79,6 +83,28 @@
 
 .recording-button {
   color: #ff4d4f;
+}
+
+.score-container {
+  margin-top: 16px;
+  padding: 16px;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border-radius: 8px;
+  color: white;
+}
+
+.score-title {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 8px;
+  text-align: center;
+}
+
+.score-value {
+  font-size: 36px;
+  font-weight: bold;
+  text-align: center;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 /* 滚动条样式 */
