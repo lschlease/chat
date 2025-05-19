@@ -9,11 +9,11 @@ const { Title } = Typography;
 function App() {
   return (
     <Layout className="app-container">
-      <Header className="header">
+      {/* <Header className="header">
         <Title level={3} style={{ color: 'white', margin: 0 }}>
           智能对话系统
         </Title>
-      </Header>
+      </Header> */}
       <Content className="content">
         <ChatInterface />
       </Content>
