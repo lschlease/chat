@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Input, Button, List, Card, Space } from 'antd';
-import { SendOutlined, ClearOutlined } from '@ant-design/icons';
+import { SendOutlined, ClearOutlined, SoundOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import io from 'socket.io-client';
 
@@ -61,9 +61,23 @@ const ChatInterface = () => {
       );
     }
 
+    const handlePlayAudio = () => {
+      const utterance = new SpeechSynthesisUtterance(msg.content);
+      utterance.lang = 'zh-CN';
+      window.speechSynthesis.speak(utterance);
+    };
+
     return (
       <Card style={{ marginBottom: 16 }}>
-        <p>{msg.content}</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <p style={{ margin: 0, flex: 1 }}>{msg.content}</p>
+          <Button 
+            type="text" 
+            icon={<SoundOutlined />} 
+            onClick={handlePlayAudio}
+            style={{ color: '#1890ff' }}
+          />
+        </div>
         {msg.score && (
           <div style={{ marginTop: 16 }}>
             <h4>得分：{msg.score}</h4>
@@ -89,6 +103,27 @@ const ChatInterface = () => {
               }}
               style={{ height: '300px' }}
             />
+            <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
+              {msg.spiderData.map((item, index) => (
+                <Card 
+                  key={index} 
+                  size="small" 
+                  style={{ 
+                    width: 'calc(50% - 8px)', 
+                    backgroundColor: '#f5f5f5',
+                    borderRadius: '8px'
+                  }}
+                >
+                  <h4 style={{ margin: 0, color: '#1890ff' }}>{item.name}</h4>
+                  <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>
+                    得分：<span style={{ color: '#52c41a', fontWeight: 'bold' }}>{item.value}</span>
+                  </p>
+                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
+                    {item.value >= 80 ? '优秀' : item.value >= 60 ? '良好' : '待提升'}
+                  </p>
+                </Card>
+              ))}
+            </div>
           </div>
         )}
       </Card>
