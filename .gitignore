@@ -1,0 +1,42 @@
+# 忽略 Node.js 项目中的依赖目录
+node_modules/
+
+# 忽略 TypeScript 编译输出目录
+dist/
+build/
+
+# 忽略 IDE 和编辑器的配置文件
+.vscode/
+.idea/
+*.iml
+
+# 忽略日志文件
+logs/
+*.log
+
+# 忽略环境变量配置文件
+.env
+.env.local
+
+# 忽略系统临时文件
+*.tmp
+*.swp
+*.swo
+*.swn
+*.bak
+
+# 忽略测试报告和覆盖率报告
+coverage/
+test-results/
+
+# 忽略 npm 和 yarn 的缓存文件
+npm-debug.log
+yarn-error.log
+.yarn-integrity
+.yarnrc.yml
+
+# 忽略 macOS 的元数据文件
+.DS_Store
+
+# 忽略 Windows 的缩略图缓存
+Thumbs.db
