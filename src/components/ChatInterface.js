@@ -95,7 +95,8 @@ const ChatInterface = () => {
       
       setMessages(prev => [...prev, {
         type: 'user',
-        content: '语音消息'
+        content: '语音消息',
+        audioUrl: URL.createObjectURL(audioBlob)
       }]);
       
       setAudioBlob(null);
@@ -134,7 +135,7 @@ const ChatInterface = () => {
 
   const renderMessage = (msg, index) => {
     if (msg.type === 'user') {
-      return <UserMessage content={msg.content} imageUrl={msg.imageUrl} />;
+      return <UserMessage content={msg.content} imageUrl={msg.imageUrl} audioUrl={msg.audioUrl} />;
     }
     return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} />;
   };
@@ -152,6 +153,7 @@ const ChatInterface = () => {
         setInputValue={setInputValue}
         isRecording={isRecording}
         imageFile={imageFile}
+        audioBlob={audioBlob}
         onSend={handleSend}
         onClear={handleClear}
         onStartRecording={startRecording}
