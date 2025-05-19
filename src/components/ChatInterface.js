@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Button, List, Card, Space, message } from 'antd';
-import { SendOutlined, ClearOutlined, SoundOutlined, AudioOutlined } from '@ant-design/icons';
+import { Input, Button, List, Card, Space, message, Upload } from 'antd';
+import { SendOutlined, ClearOutlined, SoundOutlined, AudioOutlined, PictureOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import io from 'socket.io-client';
 
@@ -11,6 +11,7 @@ const ChatInterface = () => {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [audioBlob, setAudioBlob] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
   const messagesEndRef = useRef(null);
   const audioChunks = useRef([]);
 
@@ -72,13 +73,20 @@ const ChatInterface = () => {
     scrollToBottom();
   }, [messages]);
 
+  const handleImageSelect = (info) => {
+    if (info.file) {
+      setImageFile(info.file);
+      setInputValue('图片已选择，点击发送');
+    }
+  };
+
   const handleSend = () => {
     if (isRecording) {
       stopRecording();
       return;
     }
 
-    if (!inputValue.trim() && !audioBlob) return;
+    if (!inputValue.trim() && !audioBlob && !imageFile) return;
 
     if (audioBlob) {
       // 发送语音消息
@@ -92,6 +100,20 @@ const ChatInterface = () => {
       }]);
       
       setAudioBlob(null);
+      setInputValue('');
+    } else if (imageFile) {
+      // 发送图片消息
+      const formData = new FormData();
+      formData.append('image', imageFile);
+      socket?.emit('message', formData);
+      
+      setMessages(prev => [...prev, {
+        type: 'user',
+        content: '图片消息',
+        imageUrl: URL.createObjectURL(imageFile)
+      }]);
+      
+      setImageFile(null);
       setInputValue('');
     } else {
       // 发送文字消息
@@ -109,6 +131,7 @@ const ChatInterface = () => {
   const handleClear = () => {
     setMessages([]);
     setAudioBlob(null);
+    setImageFile(null);
     setInputValue('');
   };
 
@@ -116,7 +139,11 @@ const ChatInterface = () => {
     if (msg.type === 'user') {
       return (
         <Card style={{ marginBottom: 16, backgroundColor: '#e6f7ff' }}>
-          <p>{msg.content}</p>
+          {msg.imageUrl ? (
+            <img src={msg.imageUrl} alt="用户上传" style={{ maxWidth: '200px', borderRadius: '4px' }} />
+          ) : (
+            <p>{msg.content}</p>
+          )}
         </Card>
       );
     }
@@ -242,6 +269,17 @@ const ChatInterface = () => {
           onClick={isRecording ? stopRecording : startRecording}
           style={{ color: isRecording ? '#fff' : '#1890ff' }}
         />
+        <Upload
+          accept="image/*"
+          showUploadList={false}
+          beforeUpload={() => false}
+          onChange={handleImageSelect}
+        >
+          <Button 
+            icon={<PictureOutlined />} 
+            style={{ color: imageFile ? '#1890ff' : undefined }}
+          />
+        </Upload>
         <Button type="primary" icon={<SendOutlined />} onClick={handleSend}>
           发送
         </Button>
