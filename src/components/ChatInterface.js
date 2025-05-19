@@ -103,26 +103,56 @@ const ChatInterface = () => {
               }}
               style={{ height: '300px' }}
             />
-            <div style={{ marginTop: 20, display: 'flex', flexWrap: 'wrap', gap: '16px' }}>
-              {msg.spiderData.map((item, index) => (
-                <Card 
-                  key={index} 
-                  size="small" 
-                  style={{ 
-                    width: 'calc(50% - 8px)', 
-                    backgroundColor: '#f5f5f5',
-                    borderRadius: '8px'
-                  }}
-                >
-                  <h4 style={{ margin: 0, color: '#1890ff' }}>{item.name}</h4>
-                  <p style={{ margin: '8px 0 0 0', fontSize: '14px' }}>
-                    得分：<span style={{ color: '#52c41a', fontWeight: 'bold' }}>{item.value}</span>
-                  </p>
-                  <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
-                    {item.value >= 80 ? '优秀' : item.value >= 60 ? '良好' : '待提升'}
-                  </p>
-                </Card>
-              ))}
+            <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {msg.spiderData.map((item, index) => {
+                const getEvaluation = (value) => {
+                  if (value >= 80) {
+                    return {
+                      level: '优秀',
+                      color: '#52c41a',
+                      text: '表现突出，具有很高的专业水平'
+                    };
+                  } else if (value >= 60) {
+                    return {
+                      level: '良好',
+                      color: '#1890ff',
+                      text: '表现稳定，具备基本能力'
+                    };
+                  } else {
+                    return {
+                      level: '待提升',
+                      color: '#ff4d4f',
+                      text: '需要加强学习和实践'
+                    };
+                  }
+                };
+
+                const evaluation = getEvaluation(item.value);
+
+                return (
+                  <Card 
+                    key={index} 
+                    size="small" 
+                    style={{ 
+                      width: '100%', 
+                      backgroundColor: '#f5f5f5',
+                      borderRadius: '8px'
+                    }}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <h4 style={{ margin: 0, color: '#1890ff' }}>{item.name}</h4>
+                      <div style={{ textAlign: 'right' }}>
+                        <p style={{ margin: 0, fontSize: '14px' }}>
+                          等级：<span style={{ color: evaluation.color, fontWeight: 'bold' }}>{evaluation.level}</span>
+                        </p>
+                        <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
+                          {evaluation.text}
+                        </p>
+                      </div>
+                    </div>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         )}
