@@ -5,6 +5,7 @@ import UserMessage from './UserMessage';
 import SystemResponse from './SystemResponse';
 import MessageInput from './MessageInput';
 import '../styles/chat.css';
+import { RobotOutlined } from '@ant-design/icons';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -144,8 +145,22 @@ const ChatInterface = () => {
   return (
     <div className="chat-container">
       <List
-        dataSource={messages}
-        renderItem={renderMessage}
+        dataSource={messages.length === 0 ? [{
+          type: 'system',
+          content: '很高兴为您服务',
+          isWelcome: true
+        }] : messages}
+        renderItem={(item) => {
+          if (item.isWelcome) {
+            return (
+              <div  style={{ textAlign: 'center', padding: '40px 0' }}>
+                <RobotOutlined style={{ fontSize: '48px', color: '#1890ff', marginBottom: '16px' }} />
+                <h2 style={{ color: '#1890ff', margin: 0 }}>{item.content}</h2>
+              </div>
+            );
+          }
+          return renderMessage(item);
+        }}
         className="message-list"
       />
       <div ref={messagesEndRef} />

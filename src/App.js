@@ -1,20 +1,14 @@
 import React from 'react';
-import { Layout, Typography } from 'antd';
+import { Layout } from 'antd';
 import ChatInterface from './components/ChatInterface';
 import './App.css';
 
-const { Header, Content } = Layout;
-const { Title } = Typography;
+const { Content } = Layout;
 
 function App() {
   return (
-    <Layout className="app-container">
-      {/* <Header className="header">
-        <Title level={3} style={{ color: 'white', margin: 0 }}>
-          智能对话系统
-        </Title>
-      </Header> */}
-      <Content className="content">
+    <Layout className="layout">
+      <Content>
         <ChatInterface />
       </Content>
     </Layout>
