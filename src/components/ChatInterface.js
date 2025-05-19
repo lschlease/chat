@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Input, Button, List, Card, Space } from 'antd';
-import { SendOutlined, ClearOutlined, SoundOutlined } from '@ant-design/icons';
+import { Input, Button, List, Card, Space, message } from 'antd';
+import { SendOutlined, ClearOutlined, SoundOutlined, AudioOutlined } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
 import io from 'socket.io-client';
 
@@ -8,7 +8,11 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [socket, setSocket] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [audioBlob, setAudioBlob] = useState(null);
   const messagesEndRef = useRef(null);
+  const audioChunks = useRef([]);
 
   useEffect(() => {
     // 连接WebSocket服务器
@@ -27,6 +31,39 @@ const ChatInterface = () => {
     return () => newSocket.close();
   }, []);
 
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      audioChunks.current = [];
+      
+      recorder.ondataavailable = (e) => {
+        audioChunks.current.push(e.data);
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(audioChunks.current, { type: 'audio/wav' });
+        setAudioBlob(blob);
+      };
+
+      recorder.start();
+      setMediaRecorder(recorder);
+      setIsRecording(true);
+      setInputValue('正在录音...');
+    } catch (err) {
+      message.error('无法访问麦克风');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      mediaRecorder.stream.getTracks().forEach(track => track.stop());
+      setInputValue('录音完成，点击发送');
+    }
+  };
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -36,20 +73,43 @@ const ChatInterface = () => {
   }, [messages]);
 
   const handleSend = () => {
-    if (!inputValue.trim()) return;
+    if (isRecording) {
+      stopRecording();
+      return;
+    }
 
-    const newMessage = {
-      type: 'user',
-      content: inputValue
-    };
+    if (!inputValue.trim() && !audioBlob) return;
 
-    setMessages(prev => [...prev, newMessage]);
-    socket?.emit('message', { text: inputValue });
-    setInputValue('');
+    if (audioBlob) {
+      // 发送语音消息
+      const formData = new FormData();
+      formData.append('audio', audioBlob);
+      socket?.emit('message', formData);
+      
+      setMessages(prev => [...prev, {
+        type: 'user',
+        content: '语音消息'
+      }]);
+      
+      setAudioBlob(null);
+      setInputValue('');
+    } else {
+      // 发送文字消息
+      const newMessage = {
+        type: 'user',
+        content: inputValue
+      };
+
+      setMessages(prev => [...prev, newMessage]);
+      socket?.emit('message', { text: inputValue });
+      setInputValue('');
+    }
   };
 
   const handleClear = () => {
     setMessages([]);
+    setAudioBlob(null);
+    setInputValue('');
   };
 
   const renderMessage = (msg, index) => {
@@ -173,7 +233,14 @@ const ChatInterface = () => {
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}
           onPressEnter={handleSend}
-          placeholder="请输入消息..."
+          placeholder={isRecording ? "正在录音..." : "请输入消息..."}
+          disabled={isRecording}
+        />
+        <Button 
+          type={isRecording ? "primary" : "default"}
+          icon={<AudioOutlined />} 
+          onClick={isRecording ? stopRecording : startRecording}
+          style={{ color: isRecording ? '#fff' : '#1890ff' }}
         />
         <Button type="primary" icon={<SendOutlined />} onClick={handleSend}>
           发送
