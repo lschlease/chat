@@ -1,6 +1,7 @@
 import React from 'react';
 import { Input, Button, Space, Upload, Image } from 'antd';
 import { SendOutlined, ClearOutlined, AudioOutlined, PictureOutlined } from '@ant-design/icons';
+import '../styles/chat.css';
 
 const MessageInput = ({ 
   inputValue, 
@@ -14,23 +15,23 @@ const MessageInput = ({
   onStopRecording, 
   onImageSelect 
 }) => (
-  <div>
+  <div className="message-input-container">
     {imageFile && (
-      <div style={{ marginBottom: '12px' }}>
+      <div className="preview-container">
         <Image
           src={URL.createObjectURL(imageFile)}
           alt="预览图片"
-          style={{ maxHeight: '200px', borderRadius: '4px' }}
+          className="preview-image"
           preview={false}
         />
       </div>
     )}
     {audioBlob && (
-      <div style={{ marginBottom: '12px' }}>
+      <div className="preview-container">
         <audio 
           controls 
           src={URL.createObjectURL(audioBlob)}
-          style={{ width: '100%' }}
+          className="audio-player"
         />
       </div>
     )}
@@ -46,7 +47,7 @@ const MessageInput = ({
         type={isRecording ? "primary" : "default"}
         icon={<AudioOutlined />} 
         onClick={isRecording ? onStopRecording : onStartRecording}
-        style={{ color: isRecording ? '#fff' : '#1890ff' }}
+        className={isRecording ? "recording-button" : "primary-button"}
       />
       <Upload
         accept="image/*"
@@ -56,7 +57,7 @@ const MessageInput = ({
       >
         <Button 
           icon={<PictureOutlined />} 
-          style={{ color: imageFile ? '#1890ff' : undefined }}
+          className={imageFile ? "primary-button" : undefined}
         />
       </Upload>
       <Button type="primary" icon={<SendOutlined />} onClick={onSend}>

@@ -4,6 +4,7 @@ import io from 'socket.io-client';
 import UserMessage from './UserMessage';
 import SystemResponse from './SystemResponse';
 import MessageInput from './MessageInput';
+import '../styles/chat.css';
 
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
@@ -95,7 +96,7 @@ const ChatInterface = () => {
       
       setMessages(prev => [...prev, {
         type: 'user',
-        content: '语音消息',
+        content: '语音',
         audioUrl: URL.createObjectURL(audioBlob)
       }]);
       
@@ -108,7 +109,7 @@ const ChatInterface = () => {
       
       setMessages(prev => [...prev, {
         type: 'user',
-        content: '图片消息',
+        content: '图片',
         imageUrl: URL.createObjectURL(imageFile)
       }]);
       
@@ -141,11 +142,11 @@ const ChatInterface = () => {
   };
 
   return (
-    <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
+    <div className="chat-container">
       <List
         dataSource={messages}
         renderItem={renderMessage}
-        style={{ marginBottom: '20px', maxHeight: '60vh', overflow: 'auto' }}
+        className="message-list"
       />
       <div ref={messagesEndRef} />
       <MessageInput

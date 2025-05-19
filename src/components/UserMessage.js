@@ -1,16 +1,16 @@
 import React from 'react';
-import { Card } from 'antd';
+import '../styles/chat.css';
 
 const UserMessage = ({ content, imageUrl, audioUrl }) => (
-  <Card style={{ marginBottom: 16, backgroundColor: '#e6f7ff' }}>
+  <div className="user-message">
     {imageUrl ? (
-      <img src={imageUrl} alt="用户上传" style={{ maxWidth: '200px', borderRadius: '4px' }} />
+      <img src={imageUrl} alt="用户上传" className="preview-image" />
     ) : audioUrl ? (
-      <audio controls src={audioUrl} style={{ width: '100%' }} />
+      <audio controls src={audioUrl} className="audio-player" />
     ) : (
-      <p>{content}</p>
+      <p style={{ margin: 0 }}>{content}</p>
     )}
-  </Card>
+  </div>
 );
 
 export default UserMessage; 
