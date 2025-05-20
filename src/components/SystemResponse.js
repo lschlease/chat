@@ -1,15 +1,24 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from 'antd';
-import { SoundOutlined } from '@ant-design/icons';
+import { SoundOutlined, PauseOutlined } from '@ant-design/icons';
 import SpiderChart from './SpiderChart';
 import EvaluationCard from './EvaluationCard';
 import '../styles/chat.css';
 
 const SystemResponse = ({ content, score, spiderData }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+
   const handlePlayAudio = () => {
-    const utterance = new SpeechSynthesisUtterance(content);
-    utterance.lang = 'zh-CN';
-    window.speechSynthesis.speak(utterance);
+    if (isPlaying) {
+      window.speechSynthesis.cancel();
+      setIsPlaying(false);
+    } else {
+      const utterance = new SpeechSynthesisUtterance(content);
+      utterance.lang = 'zh-CN';
+      utterance.onend = () => setIsPlaying(false);
+      window.speechSynthesis.speak(utterance);
+      setIsPlaying(true);
+    }
   };
 
   return (
@@ -18,7 +27,7 @@ const SystemResponse = ({ content, score, spiderData }) => {
         <p style={{ margin: 0, flex: 1 }}>{content}</p>
         <Button 
           type="text" 
-          icon={<SoundOutlined />} 
+          icon={isPlaying ? <PauseOutlined /> : <SoundOutlined />} 
           onClick={handlePlayAudio}
           className="primary-button"
         />

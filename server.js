@@ -20,7 +20,7 @@ io.on('connection', (socket) => {
   socket.on('message', (data) => {
     // 模拟后端处理逻辑
     const response = {
-      text: ``,
+      text: `这是一段后端返回用于前端播放语音的文字`,
       score: Math.floor(Math.random() * 100),
       spiderData: [
         { name: '能力A', value: Math.floor(Math.random() * 100) },

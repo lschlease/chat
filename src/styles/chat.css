@@ -15,7 +15,7 @@ body {
 
 .message-list {
   flex: 1;
-  width: 100%;
+  width: 60%;
   overflow: auto;
   padding: 24px;
   background-color: #fff;
@@ -43,7 +43,7 @@ body {
 }
 
 .message-input-container {
-  width: 100%;
+  width: 60%;
   background-color: #fff;
   padding: 20px;
   border-radius: 16px;
