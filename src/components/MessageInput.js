@@ -42,12 +42,22 @@ const MessageInput = ({
         onPressEnter={onSend}
         placeholder={isRecording ? "正在录音..." : "请输入消息..."}
         disabled={isRecording}
+        style={{ 
+          height: '50px', 
+          fontSize: '16px',
+          padding: '0 15px'
+        }}
       />
       <Button 
         type={isRecording ? "primary" : "default"}
-        icon={<AudioOutlined />} 
+        icon={<AudioOutlined style={{ fontSize: '20px' }} />} 
         onClick={isRecording ? onStopRecording : onStartRecording}
         className={isRecording ? "recording-button" : "primary-button"}
+        style={{ 
+          height: '50px',
+          width: '60px',
+          fontSize: '16px'
+        }}
       />
       <Upload
         accept="image/*"
@@ -56,14 +66,36 @@ const MessageInput = ({
         onChange={onImageSelect}
       >
         <Button 
-          icon={<PictureOutlined />} 
+          icon={<PictureOutlined style={{ fontSize: '20px' }} />} 
           className={imageFile ? "primary-button" : undefined}
+          style={{ 
+            height: '50px',
+            width: '60px',
+            fontSize: '16px'
+          }}
         />
       </Upload>
-      <Button type="primary" icon={<SendOutlined />} onClick={onSend}>
+      <Button 
+        type="primary" 
+        icon={<SendOutlined style={{ fontSize: '20px' }} />} 
+        onClick={onSend}
+        style={{ 
+          height: '50px',
+          width: '100px',
+          fontSize: '16px'
+        }}
+      >
         发送
       </Button>
-      <Button icon={<ClearOutlined />} onClick={onClear}>
+      <Button 
+        icon={<ClearOutlined style={{ fontSize: '20px' }} />} 
+        onClick={onClear}
+        style={{ 
+          height: '50px',
+          width: '80px',
+          fontSize: '16px'
+        }}
+      >
         清空
       </Button>
     </Space.Compact>
