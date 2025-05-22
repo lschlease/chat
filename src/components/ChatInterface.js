@@ -86,6 +86,97 @@ const ChatInterface = () => {
     }
   };
 
+  // 将audioBlob转换为WAV格式，但不自动下载
+  const convertToWav = async (audioBlob) => {
+    try {
+      // 创建音频上下文
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // 解码音频数据
+      const arrayBuffer = await audioBlob.arrayBuffer();
+      const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+      
+      // 创建一个离线音频上下文以生成WAV
+      const offlineContext = new OfflineAudioContext(
+        audioBuffer.numberOfChannels,
+        audioBuffer.length,
+        audioBuffer.sampleRate
+      );
+      
+      // 创建音频源
+      const source = offlineContext.createBufferSource();
+      source.buffer = audioBuffer;
+      source.connect(offlineContext.destination);
+      source.start(0);
+      
+      // 渲染音频数据
+      const renderedBuffer = await offlineContext.startRendering();
+      
+      // 将AudioBuffer转换为WAV格式
+      const wavBlob = audioBufferToWav(renderedBuffer);
+      
+      // 创建WAV文件
+      const wavFile = new File([wavBlob], 'recording.wav', { type: 'audio/wav' });
+      console.log("WAV文件创建成功:", wavFile);
+      
+      return wavFile;
+    } catch (error) {
+      console.error("转换WAV失败:", error);
+      // 如果转换失败，使用原始音频文件
+      return new File([audioBlob], 'recording.mp3', { type: 'audio/mp3' });
+    }
+  };
+  
+  // AudioBuffer转换为WAV格式
+  function audioBufferToWav(buffer) {
+    const numOfChan = buffer.numberOfChannels;
+    const length = buffer.length * numOfChan * 2;
+    const sampleRate = buffer.sampleRate;
+    
+    // 创建WAV文件头
+    const wav = new ArrayBuffer(44 + length);
+    const view = new DataView(wav);
+    
+    // RIFF标识
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + length, true);
+    writeString(view, 8, 'WAVE');
+    
+    // fmt数据块
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true); // 数据块大小
+    view.setUint16(20, 1, true); // PCM格式
+    view.setUint16(22, numOfChan, true); // 通道数
+    view.setUint32(24, sampleRate, true); // 采样率
+    view.setUint32(28, sampleRate * numOfChan * 2, true); // 每秒字节数
+    view.setUint16(32, numOfChan * 2, true); // 数据块对齐
+    view.setUint16(34, 16, true); // 位深度
+    
+    // 数据块
+    writeString(view, 36, 'data');
+    view.setUint32(40, length, true);
+    
+    // 写入PCM采样数据
+    const offset = 44;
+    for (let i = 0; i < buffer.numberOfChannels; i++) {
+      const channel = buffer.getChannelData(i);
+      for (let j = 0; j < channel.length; j++) {
+        const index = offset + (j * numOfChan + i) * 2;
+        const sample = Math.max(-1, Math.min(1, channel[j]));
+        view.setInt16(index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
+      }
+    }
+    
+    return new Blob([view], { type: 'audio/wav' });
+  }
+  
+  // 写入字符串到DataView
+  function writeString(view, offset, string) {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  }
+
   // 统一的请求处理函数
   const request = async (url, formData) => {
     try {
@@ -177,9 +268,11 @@ const ChatInterface = () => {
 
     // 准备请求数据
     if (audioBlob) {
-      const audioFile = new File([audioBlob], 'recording.mp3', { type: 'audio/mp3' });
+      // 将MP3转换为WAV格式
+      const wavFile = await convertToWav(audioBlob);
+      
       formData.append('word', 'test');
-      formData.append('audio_file', audioFile);
+      formData.append('audio_file', wavFile);
       userMessage = {
         type: 'user',
         content: '语音',
