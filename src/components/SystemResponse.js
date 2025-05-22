@@ -24,7 +24,7 @@ const SystemResponse = ({ content, score, spiderData }) => {
   return (
     <div className="system-message">
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <p style={{ margin: 0, flex: 1 }}>{content}</p>
+        <div style={{ margin: 0, flex: 1 }}>{content}</div>
         <Button 
           type="text" 
           icon={isPlaying ? <PauseOutlined /> : <SoundOutlined />} 

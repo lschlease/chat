@@ -139,4 +139,38 @@ body {
 
 .message-list::-webkit-scrollbar-thumb:hover {
   background: #555;
+}
+
+/* 打字动画效果 */
+.typing-dots {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+}
+
+.typing-dots span {
+  width: 6px;
+  height: 6px;
+  background-color: #1890ff;
+  border-radius: 50%;
+  display: inline-block;
+  animation: typing 1.4s infinite ease-in-out both;
+  opacity: 0.7;
+}
+
+.typing-dots span:nth-child(1) {
+  animation-delay: -0.32s;
+}
+
+.typing-dots span:nth-child(2) {
+  animation-delay: -0.16s;
+}
+
+@keyframes typing {
+  0%, 80%, 100% { 
+    transform: scale(0);
+  }
+  40% { 
+    transform: scale(1);
+  }
 } 

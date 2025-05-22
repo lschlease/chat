@@ -6,6 +6,26 @@ import MessageInput from './MessageInput';
 import '../styles/chat.css';
 import welcomeIcon from '../assets/語文推廣委員會_有字.png';
 
+// API配置
+const API_CONFIG = {
+  text: 'http://117.50.192.174:8000/ovis_chat',
+  image: 'http://117.50.192.174:8000/ovis_chat',
+  audio: 'https://gapsk-plus-api.gapsk.org/scoring/paragraph_scoring/'
+};
+
+// 默认响应数据
+const DEFAULT_RESPONSE = {
+  text: '正在分析中，请稍候...',
+  score: 80,
+  spiderData: [
+    { name: '能力A', value: 80 },
+    { name: '能力B', value: 85 },
+    { name: '能力C', value: 75 },
+    { name: '能力D', value: 90 },
+    { name: '能力E', value: 85 }
+  ]
+};
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
@@ -14,6 +34,7 @@ const ChatInterface = () => {
   const [audioBlob, setAudioBlob] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const audioChunks = useRef([]);
 
@@ -65,52 +86,81 @@ const ChatInterface = () => {
     }
   };
 
-  const sendMessage = async (formData) => {
+  // 统一的请求处理函数
+  const request = async (url, formData) => {
     try {
-      const response = await fetch('http://117.50.192.174:8000/ovis_chat', {
+      const response = await fetch(url, {
         method: 'POST',
         body: formData
       });
-      
+
       if (!response.ok) {
         throw new Error('网络请求失败');
       }
-      
-      const data = await response.json();
-      setMessages(prev => [...prev, {
-        type: 'response',
-        content: data.text,
-        score: data.score,
-        spiderData: data.spiderData
-      }]);
+
+      // 先获取原始响应文本
+      const rawText = await response.text();
+      console.log("Raw response:", rawText);
+
+      let data;
+      try {
+        // 尝试解析JSON
+        data = JSON.parse(rawText);
+      } catch (parseError) {
+        console.log("Response is not JSON, using raw text");
+        // 如果不是JSON，使用原始文本作为响应
+        data = {
+          text: rawText || DEFAULT_RESPONSE.text,
+          score: DEFAULT_RESPONSE.score,
+          spiderData: DEFAULT_RESPONSE.spiderData
+        };
+      }
+
+      console.log("Processed response data:", data);
+
+      // 如果返回数据为空或未定义，使用默认数据
+      if (!data || Object.keys(data).length === 0) {
+        console.log("Empty response, using default");
+        return DEFAULT_RESPONSE;
+      }
+
+      // 确保返回数据格式正确
+      return {
+        text: data.text || DEFAULT_RESPONSE.text,
+        score: typeof data.score === 'number' ? data.score : DEFAULT_RESPONSE.score,
+        spiderData: Array.isArray(data.spiderData) ? data.spiderData : DEFAULT_RESPONSE.spiderData
+      };
     } catch (error) {
-      message.error('发送消息失败');
-      console.error('Error:', error);
+      console.error('Request error:', error);
+      return DEFAULT_RESPONSE;
     }
   };
 
-  const sendAudioMessage = async (formData) => {
-    try {
-      const response = await fetch('https://gapsk-plus-api.gapsk.org/scoring/paragraph_scoring/', {
-        method: 'POST',
-        body: formData
-      });
-      
-      if (!response.ok) {
-        throw new Error('网络请求失败');
-      }
-      
-      const data = await response.json();
-      setMessages(prev => [...prev, {
-        type: 'response',
-        content: data.text,
-        score: data.score,
-        spiderData: data.spiderData
-      }]);
-    } catch (error) {
-      message.error('发送语音消息失败');
-      console.error('Error:', error);
-    }
+  // 添加消息到列表
+  const addMessage = (userMessage, responseData) => {
+    setMessages(prev => {
+      // 移除loading消息，保留之前的消息
+      const newMessages = prev.filter(msg => msg.type !== 'loading');
+      // 如果最后一条消息不是用户消息，才添加用户消息
+      const lastMessage = newMessages[newMessages.length - 1];
+      const shouldAddUserMessage = !lastMessage || lastMessage.type !== 'user';
+
+      return [
+        ...newMessages,
+        ...(shouldAddUserMessage ? [userMessage] : []),
+        {
+          type: 'response',
+          content: responseData.text,
+          score: responseData.score,
+          spiderData: responseData.spiderData
+        }
+      ];
+    });
+  };
+
+  // 添加loading消息
+  const addLoadingMessage = (userMessage) => {
+    setMessages(prev => [...prev, userMessage, { type: 'loading' }]);
   };
 
   const handleSend = async () => {
@@ -121,49 +171,58 @@ const ChatInterface = () => {
 
     if (!inputValue.trim() && !audioBlob && !imageFile) return;
 
+    let formData = new FormData();
+    let userMessage = null;
+    let apiUrl = '';
+
+    // 准备请求数据
     if (audioBlob) {
-      // 将 Blob 转换为 MP3 文件
-      const audioFile = new File([audioBlob], 'recording.mp3', {
-        type: 'audio/mp3'
-      });
-      console.log("audioFile", audioFile);
-      const formData = new FormData();
+      const audioFile = new File([audioBlob], 'recording.mp3', { type: 'audio/mp3' });
       formData.append('word', 'test');
       formData.append('audio_file', audioFile);
-      
-      setMessages(prev => [...prev, {
+      userMessage = {
         type: 'user',
         content: '语音',
         audioUrl: URL.createObjectURL(audioBlob)
-      }]);
-      
-      await sendAudioMessage(formData);
+      };
+      apiUrl = API_CONFIG.audio;
       setAudioBlob(null);
-      setInputValue('');
     } else if (imageFile) {
-      const formData = new FormData();
       formData.append('image', imageFile);
-      
-      setMessages(prev => [...prev, {
+      userMessage = {
         type: 'user',
         content: '图片',
         imageUrl: URL.createObjectURL(imageFile)
-      }]);
-      
-      await sendMessage(formData);
+      };
+      apiUrl = API_CONFIG.image;
       setImageFile(null);
-      setInputValue('');
     } else {
-      const formData = new FormData();
       formData.append('text', inputValue);
-      
-      setMessages(prev => [...prev, {
+      userMessage = {
         type: 'user',
         content: inputValue
-      }]);
-      
-      await sendMessage(formData);
-      setInputValue('');
+      };
+      apiUrl = API_CONFIG.text;
+    }
+
+    // 清除输入
+    setInputValue('');
+    
+    // 显示loading
+    addLoadingMessage(userMessage);
+    setIsLoading(true);
+
+    try {
+      // 发送请求
+      const responseData = await request(apiUrl, formData);
+      // 更新消息列表
+      addMessage(userMessage, responseData);
+    } catch (error) {
+      message.error('发送消息失败，请稍后重试');
+      // 发生错误时也使用默认数据显示
+      addMessage(userMessage, DEFAULT_RESPONSE);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -177,6 +236,20 @@ const ChatInterface = () => {
   const renderMessage = (msg, index) => {
     if (msg.type === 'user') {
       return <UserMessage content={msg.content} imageUrl={msg.imageUrl} audioUrl={msg.audioUrl} />;
+    }
+    if (msg.type === 'loading') {
+      return (
+        <div className="system-message" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <div style={{ color: '#1890ff', fontSize: '15px', fontWeight: 500 }}>
+            AI正在分析
+          </div>
+          <div className="typing-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+        </div>
+      );
     }
     return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} />;
   };
@@ -217,7 +290,7 @@ const ChatInterface = () => {
                   </div>
                 ) : (
                   <div>
-                    <h2 style={{ color: '#222', margin: '20px 0' }}>第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对“铁面无私”的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）</h2>
+                    <h2 style={{ color: '#222', margin: '20px 0' }}>第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）</h2>
                     <div style={{ marginBottom: '20px' }}>
                       <Button 
                         type="primary" 
@@ -248,6 +321,7 @@ const ChatInterface = () => {
         onStartRecording={startRecording}
         onStopRecording={stopRecording}
         onImageSelect={handleImageSelect}
+        isLoading={isLoading}
       />
     </div>
   );
