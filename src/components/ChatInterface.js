@@ -15,14 +15,14 @@ const API_CONFIG = {
 
 // 默认响应数据
 const DEFAULT_RESPONSE = {
-  text: '正在分析中，请稍候...',
+  text: '很高兴为您服务',
   score: 80,
   spiderData: [
-    { name: '能力A', value: 80 },
-    { name: '能力B', value: 85 },
-    { name: '能力C', value: 75 },
-    { name: '能力D', value: 90 },
-    { name: '能力E', value: 85 }
+    { name: '流利度得分', value: 80 },
+    { name: '完整度得分', value: 85 },
+    { name: '准确度得分', value: 75 },
+    { name: '声调得分', value: 90 },
+    { name: '无调发音得分', value: 85 }
   ]
 };
 
@@ -193,37 +193,28 @@ const ChatInterface = () => {
       const rawText = await response.text();
       console.log("Raw response:", rawText);
 
-      let data;
       try {
         // 尝试解析JSON
-        data = JSON.parse(rawText);
+        const data = JSON.parse(rawText);
+        // 如果是JSON格式，直接返回
+        return {
+          isJson: true,
+          data: data
+        };
       } catch (parseError) {
         console.log("Response is not JSON, using raw text");
-        // 如果不是JSON，使用原始文本作为响应
-        data = {
-          text: rawText || DEFAULT_RESPONSE.text,
-          score: DEFAULT_RESPONSE.score,
-          spiderData: DEFAULT_RESPONSE.spiderData
+        // 如果不是JSON，返回原始文本
+        return {
+          isJson: false,
+          text: rawText
         };
       }
-
-      console.log("Processed response data:", data);
-
-      // 如果返回数据为空或未定义，使用默认数据
-      if (!data || Object.keys(data).length === 0) {
-        console.log("Empty response, using default");
-        return DEFAULT_RESPONSE;
-      }
-
-      // 确保返回数据格式正确
-      return {
-        text: data.text || DEFAULT_RESPONSE.text,
-        score: typeof data.score === 'number' ? data.score : DEFAULT_RESPONSE.score,
-        spiderData: Array.isArray(data.spiderData) ? data.spiderData : DEFAULT_RESPONSE.spiderData
-      };
     } catch (error) {
       console.error('Request error:', error);
-      return DEFAULT_RESPONSE;
+      return {
+        isJson: false,
+        text: '请求失败，请稍后重试'
+      };
     }
   };
 
@@ -241,9 +232,15 @@ const ChatInterface = () => {
         ...(shouldAddUserMessage ? [userMessage] : []),
         {
           type: 'response',
-          content: responseData.text,
-          score: responseData.score,
-          spiderData: responseData.spiderData
+          content: responseData.isJson ? '语音评分完成' : responseData.text,
+          score: responseData.isJson ? responseData.data?.data?.overall || 0 : null,
+          spiderData: responseData.isJson ? [
+            { name: '流利度得分', value: responseData.data?.data?.fluency?.overall || 0 },
+            { name: '完整度得分', value: responseData.data?.data?.integrity || 0 },
+            { name: '准确度得分', value: responseData.data?.data?.accuracy || 0 },
+            { name: '声调得分', value: responseData.data?.data?.tone || 0 },
+            { name: '无调发音得分', value: responseData.data?.data?.phn || 0 }
+          ] : null
         }
       ];
     });
@@ -307,13 +304,15 @@ const ChatInterface = () => {
 
     try {
       // 发送请求
-      const responseData = await request(apiUrl, formData);
+      const response = await request(apiUrl, formData);
       // 更新消息列表
-      addMessage(userMessage, responseData);
+      addMessage(userMessage, response);
     } catch (error) {
       message.error('发送消息失败，请稍后重试');
-      // 发生错误时也使用默认数据显示
-      addMessage(userMessage, DEFAULT_RESPONSE);
+      addMessage(userMessage, {
+        isJson: false,
+        text: '请求失败，请稍后重试'
+      });
     } finally {
       setIsLoading(false);
     }

@@ -39,11 +39,11 @@ const EvaluationCard = ({ name, value }) => {
         <h4 style={{ margin: 0, color: '#1890ff' }}>{name}</h4>
         <div style={{ textAlign: 'right' }}>
           <p style={{ margin: 0, fontSize: '14px' }}>
-            等级：<span style={{ color: evaluation.color, fontWeight: 'bold' }}>{evaluation.level}</span>
+            得分：<span style={{ color: evaluation.color, fontWeight: 'bold' }}>{value}</span>
           </p>
-          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
+          {/* <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
             {evaluation.text}
-          </p>
+          </p> */}
         </div>
       </div>
     </Card>
