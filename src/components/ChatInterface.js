@@ -256,6 +256,42 @@ const ChatInterface = () => {
       // 根据messageType判断类型，保持与发送时的判断一致
       // 文字类型
       if (responseData.messageType === 'text') {
+        // 优化处理维度分析数据
+        const processDimensionData = (dimension, name) => {
+          if (!dimension) return { name, value: 0, content: '暂无数据' };
+          
+          // 合并评分原因和文本表现，避免出现undefined
+          const reason = dimension.scoring_reason || '';
+          const performance = dimension.text_performance || '';
+          
+          // 智能合并，如果两者都有值则换行显示
+          const content = reason && performance 
+            ? `${reason}\n\n${performance}` 
+            : reason || performance || '暂无详细数据';
+            
+          return {
+            name,
+            value: dimension.score || 0,
+            content
+          };
+        };
+        
+        // 获取各维度数据
+        const dimensionAnalysis = responseData?.dimension_analysis || {};
+        
+        // 准备输入分析和问题分析数据
+        const inputAnalysis = responseData?.input_analysis.content_relevance +   responseData?.input_analysis.response_text + responseData?.input_analysis.subjective_question + responseData?.input_analysis.word_count
+       
+        
+        const problemAnalysis = responseData?.problem_analysis || {
+          summary: responseData?.problem_analysis?.expected_content+ responseData?.problem_analysis.question_type,
+          points: [
+            responseData?.problem_analysis?.keywords[0],
+            responseData?.problem_analysis?.keywords[1],
+            responseData?.problem_analysis?.keywords[2],
+          ]
+        };
+        
         return [
           ...newMessages,
           ...(shouldAddUserMessage ? [userMessage] : []),
@@ -263,13 +299,15 @@ const ChatInterface = () => {
             type: 'response',
             messageType: 'text',
             content: '文字完成评分',
-            score: responseData.data?.data?.overall || 0,
+            score: responseData?.input_analysis?.overall_score,
+            inputAnalysis,
+            problemAnalysis,
             spiderData: [
-              { name: '流利度得分', value: responseData.data?.data?.fluency?.overall || 0 },
-              { name: '完整度得分', value: responseData.data?.data?.integrity || 0 },
-              { name: '准确度得分', value: responseData.data?.data?.accuracy || 0 },
-              { name: '声调得分', value: responseData.data?.data?.tone || 0 },
-              { name: '无调发音得分', value: responseData.data?.data?.phn || 0 }
+              processDimensionData(dimensionAnalysis?.content_abundance, '内容丰富度'),
+              processDimensionData(dimensionAnalysis?.content_relevance, '内容相关性'),
+              processDimensionData(dimensionAnalysis?.expression_fluidity, '表达流畅性'),
+              processDimensionData(dimensionAnalysis?.grammatical_structure, '语法结构'),
+              processDimensionData(dimensionAnalysis?.vocabulary_usage, '词汇用法')
             ],
             imageUrl: null
           }
@@ -278,59 +316,68 @@ const ChatInterface = () => {
       // 图片类型
       if (responseData.messageType === 'image') {
         // 安全地获取数据，避免undefined错误
-        let depth_analysis_table = [];
-        let good_words_sentences = [];
-        let image_text_processing = [];
-        
-        try {
-          // 检查是否存在数据并安全处理
-          if (responseData.depth_analysis_table && Array.isArray(responseData.depth_analysis_table)) {
-            depth_analysis_table = responseData.depth_analysis_table.map(item => {
-              return {
-                name: item.name || '',
-                value: item.value || null,
-                content: item.content || ''
-              }
+        const processImageData = () => {
+          let overview = [];
+          let deepAnalysis = [];
+          let goodWordsAndSentences = [];
+          let imageTextProcessing = [];
+          
+          try {
+            // 处理总评数据
+            overview.push({
+              name: '整体语言风格',
+              value: null,
+              content: responseData?.overall_language_style || '暂无数据'
             });
-          }
-        } catch (error) {
-          console.error("处理depth_analysis_table时出错:", error);
-        }
-        
-        try {
-          if (responseData.good_words_sentences && Array.isArray(responseData.good_words_sentences)) {
-            good_words_sentences = responseData.good_words_sentences.map(item => {
-              return {
-                name: item.position || '',
+            
+            // 处理深度分析数据
+            if (responseData.depth_analysis_table && responseData.depth_analysis_table[0]) {
+              const analysis = responseData.depth_analysis_table[0];
+              deepAnalysis = [
+                { name: '情感传递', value: null, content: analysis.emotion_transmission || '暂无数据' },
+                { name: '语言亮点', value: null, content: analysis.language_highlights || '暂无数据' },
+                { name: '学习建议', value: null, content: analysis.learning_suggestions || '暂无数据' },
+                { name: '句子', value: null, content: analysis.sentence || '暂无数据' }
+              ];
+            }
+            
+            // 处理好词好句
+            if (responseData.good_words_sentences && Array.isArray(responseData.good_words_sentences)) {
+              goodWordsAndSentences = responseData.good_words_sentences.map(item => ({
+                name: item.position || '好词好句',
                 value: item.priority || null,
-                content: item.sentence || ''
-              }
-            });
-          }
-        } catch (error) {
-          console.error("处理good_words_sentences时出错:", error);
-        }
-        
-        try {
-          if (responseData.image_text_processing && 
-              responseData.image_text_processing.paragraphs && 
-              Array.isArray(responseData.image_text_processing.paragraphs)) {
-            image_text_processing = responseData.image_text_processing.paragraphs.map(item => {
-              return {
-                name: item.paragraph_number || '',
+                content: item.sentence || '暂无数据'
+              }));
+            }
+            
+            // 处理图像文本
+            if (responseData.image_text_processing && 
+                responseData.image_text_processing.paragraphs && 
+                Array.isArray(responseData.image_text_processing.paragraphs)) {
+              imageTextProcessing = responseData.image_text_processing.paragraphs.map(item => ({
+                name: item.paragraph_number || '段落',
                 value: item.value || null,
-                content: item.content || ''
-              }
-            });
+                content: item.content || '暂无数据'
+              }));
+            }
+          } catch (error) {
+            console.error("处理图片数据时出错:", error);
           }
-        } catch (error) {
-          console.error("处理image_text_processing时出错:", error);
-        }
+          
+          // 确保每个类别至少有一个项目
+          if (deepAnalysis.length === 0) {
+            deepAnalysis.push({ name: '深度分析', value: null, content: '暂无数据' });
+          }
+          if (goodWordsAndSentences.length === 0) {
+            goodWordsAndSentences.push({ name: '好词好句', value: null, content: '暂无数据' });
+          }
+          if (imageTextProcessing.length === 0) {
+            imageTextProcessing.push({ name: '图像文本', value: null, content: '暂无数据' });
+          }
+          
+          return [...overview, ...deepAnalysis, ...goodWordsAndSentences, ...imageTextProcessing];
+        };
         
-        console.log("depth_analysis_table", depth_analysis_table);
-        console.log("good_words_sentences", good_words_sentences);
-        console.log("image_text_processing", image_text_processing);
-
         return [
           ...newMessages,
           ...(shouldAddUserMessage ? [userMessage] : []),
@@ -339,26 +386,46 @@ const ChatInterface = () => {
             messageType: 'image',
             content: '图片评分完成',
             score: null,
-            spiderData: [
-              //总评
-              { name: '整体语言风格', value: null, content: responseData?.overall_language_style || '暂无数据' },
-              // 深度分析表
-              { name: '情感传递', value: null, content: responseData?.depth_analysis_table?.[0]?.emotion_transmission || '暂无数据'},
-              { name: '语言亮点', value: null, content: responseData?.depth_analysis_table?.[0]?.language_highlights || '暂无数据'},
-              { name: '学习建议', value: null, content: responseData?.depth_analysis_table?.[0]?.learning_suggestions || '暂无数据' },
-              { name: '句子', value: null, content: responseData?.depth_analysis_table?.[0]?.sentence || '暂无数据' },
-              // 好词好句
-              ...(good_words_sentences.length > 0 ? good_words_sentences : [{ name: '好词好句', value: null, content: '暂无数据' }]),
-              // 图像文本处理
-              ...(image_text_processing.length > 0 ? image_text_processing : [{ name: '图像文本', value: null, content: '暂无数据' }])
-            ],
+            spiderData: processImageData(),
             imageUrl: responseData.imageUrl || null
           }
         ];
       }
-      // 频频/音频类型
+      // 音频类型
       if (responseData.messageType === 'audio') {
         console.log("responseData:3333", responseData?.data?.overall);
+        
+        // 处理音频评分数据
+        const processAudioData = () => {
+          const dimensions = [
+            { name: '流利度得分', field: 'fluency.overall' },
+            { name: '完整度得分', field: 'integrity' },
+            { name: '准确度得分', field: 'accuracy' },
+            { name: '声调得分', field: 'tone' },
+            { name: '无调发音得分', field: 'phn' }
+          ];
+          
+          return dimensions.map(dim => {
+            // 根据字段路径获取数据，处理嵌套字段如 'fluency.overall'
+            const getValue = (obj, path) => {
+              if (!obj) return '0';
+              const fields = path.split('.');
+              let value = obj;
+              for (const field of fields) {
+                value = value[field];
+                if (value === undefined || value === null) return '0';
+              }
+              return value || '0';
+            };
+            
+            return {
+              name: dim.name,
+              value: getValue(responseData?.data, dim.field),
+              content: null
+            };
+          });
+        };
+        
         return [
           ...newMessages,
           ...(shouldAddUserMessage ? [userMessage] : []),
@@ -367,13 +434,7 @@ const ChatInterface = () => {
             messageType: 'audio',
             content: '语音评分完成',
             score: responseData?.data?.overall || null,
-            spiderData: [
-              { name: '流利度得分', value: responseData?.data?.fluency?.overall || '0' ,content: null},
-              { name: '完整度得分', value: responseData?.data?.integrity || '0' ,content: null},
-              { name: '准确度得分', value: responseData?.data?.accuracy || '0' ,content: null},
-              { name: '声调得分', value: responseData?.data?.tone || '0' ,content: null},
-              { name: '无调发音得分', value: responseData?.data?.phn || '0' ,content: null}
-            ],
+            spiderData: processAudioData(),
             imageUrl: null
           }
         ];
@@ -399,6 +460,33 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, userMessage, { type: 'loading' }]);
   };
 
+  // 优化音频下载函数
+  const downloadAudio = (audioBlob, filename = 'recorded-audio.wav') => {
+    if (!audioBlob) {
+      console.warn('没有可下载的音频数据');
+      return;
+    }
+    
+    try {
+      const url = URL.createObjectURL(audioBlob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      
+      // 清理URL对象
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        console.log(`音频文件 "${filename}" 已保存`);
+      }, 100);
+    } catch (error) {
+      console.error('下载音频文件失败:', error);
+    }
+  };
+
   const handleSend = async () => {
     if (isRecording) {
       stopRecording();
@@ -412,11 +500,13 @@ const ChatInterface = () => {
     let apiUrl = '';
     // 记录消息类型，与接收时判断保持一致
     let messageType = '';
+    let localAudioBlob = null;
 
     // 准备请求数据
     if (audioBlob) {
       // 将MP3转换为WAV格式
       const wavFile = await convertToWav(audioBlob);
+      localAudioBlob = wavFile; // 保存一份用于下载
       
       formData.append('word', 'test');
       formData.append('audio_file', wavFile);
@@ -428,6 +518,10 @@ const ChatInterface = () => {
       apiUrl = API_CONFIG.audio;
       setAudioBlob(null);
       messageType = 'audio';
+      
+      // 下载音频文件
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      downloadAudio(localAudioBlob, `recorded-audio-${timestamp}.wav`);
     } else if (imageFile) {
       formData.append('image', imageFile);
       userMessage = {
@@ -440,9 +534,9 @@ const ChatInterface = () => {
       messageType = 'image';
     } else {
       const parms = {
-        '题目': currentQuestion === 1 ? '第一题：说说你对人生的感悟 （2分钟）' : '第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）',
-        "回答": inputValue,
-        "type": currentQuestion === 1 ? "主观题" : "客观题"
+        quesstion: currentQuestion === 1 ? '第一题：说说你对人生的感悟 （2分钟）' : '第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）',
+        text: currentQuestion === 1 ? inputValue : '人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）',
+        type: currentQuestion === 1 ? "主观题" : "客观题"
       }
       formData.append('text', JSON.stringify(parms));
       userMessage = {
@@ -463,7 +557,7 @@ const ChatInterface = () => {
     try {
       // 发送请求
       const response = await request(apiUrl, formData);
-      console.log("Response:", response);
+      console.log("Response:text", response);
       
       // 确保响应数据包含消息类型信息
       let responseWithType = response;
@@ -548,18 +642,7 @@ const ChatInterface = () => {
       );
     }
     
-    // 根据消息类型决定是否显示雷达图
-    if (msg.messageType === 'text' || msg.messageType === 'image') {
-      return <SystemResponse 
-        content={msg.content} 
-        score={msg.score} 
-        spiderData={msg.spiderData} 
-        showRadarChart={false} 
-        error={msg.error || false} 
-      />;
-    }
-    
-    // 音频类型或其他类型显示雷达图
+    // 所有类型都显示雷达图
     return <SystemResponse 
       content={msg.content} 
       score={msg.score} 
