@@ -86,21 +86,6 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
     );
   };
 
-  // 渲染问题分析中的点列表
-  const renderProblemPoints = (problemData) => {
-    if (!problemData || !problemData.points || !Array.isArray(problemData.points)) {
-      return <p>暂无具体改进建议</p>;
-    }
-    
-    return (
-      <ul style={{ paddingLeft: 20, marginTop: 10, marginBottom: 0 }}>
-        {problemData.points.map((point, index) => (
-          <li key={index}>{point}</li>
-        ))}
-      </ul>
-    );
-  };
-
   // 安全地分组数据，确保即使数据结构异常也不会崩溃
   const groupedData = spiderData ? groupData(spiderData) : {};
 
@@ -159,6 +144,20 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
           {/* 文字类型的内容 */}
           {groupedData.textData && (
             <div style={{ marginTop: 20 }}>
+              {/* 如果有音频数据，显示音频评分信息 */}
+              {inputAnalysis && inputAnalysis.audioScore && (
+                <div className="audio-score-info" style={{ marginBottom: 20, padding: 15, backgroundColor: '#f0f8ff', borderRadius: 8, border: '1px solid #d9e8ff' }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#1890ff' }}>音频评分信息</h3>
+                  <div style={{ fontSize: '14px', lineHeight: 1.5 }}>
+                    <div style={{ marginBottom: 8 }}>
+                      <span style={{ fontWeight: 'bold' }}>总体评分: </span>
+                      <span>{inputAnalysis.audioScore}</span>
+                    </div>
+                    <div>该评分基于您的语音输入，同时我们已将您的语音转换为文字进行文本分析。</div>
+                  </div>
+                </div>
+              )}
+              
               <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '15px 0 10px 0', color: '#ff4d4f' }}>量纲分析</h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {groupedData.textData.map((item, index) => (
@@ -168,36 +167,21 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
               
               <Divider style={{ margin: '20px 0' }} />
               
-              {/* 输入分析模块 */}
-              <div style={{ marginBottom: 20, padding: 15, backgroundColor: '#f9f9f9', borderRadius: 8 }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#ff4d4f' }}>输入分析</h3>
-                <div style={{ fontSize: '14px', lineHeight: 1.5, color: '#333' }}>
-                  {typeof inputAnalysis === 'string' ? inputAnalysis : 
-                  "您的输入文字已完成分析，以下是各个维度的评分和详细分析。通过量纲分析可以了解您在内容丰富度、相关性、表达流畅性等方面的表现。"}
+              {/* 输入分析模块 - 简化为纯文本显示 */}
+              {inputAnalysis && (
+                <div style={{ marginBottom: 20 }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#ff4d4f' }}>输入分析</h3>
+                  <p>{typeof inputAnalysis === 'string' ? inputAnalysis : (inputAnalysis.text || '')}</p>
                 </div>
-              </div>
+              )}
               
-              {/* 问题分析模块 */}
-              <div style={{ marginBottom: 20, padding: 15, backgroundColor: '#f9f9f9', borderRadius: 8 }}>
-                <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#ff4d4f' }}>问题分析</h3>
-                <div style={{ fontSize: '14px', lineHeight: 1.5, color: '#333' }}>
-                  {problemAnalysis ? 
-                    <>
-                      {problemAnalysis.summary || "根据分析结果，您可以重点关注以下几个方面来提高："}
-                      {renderProblemPoints(problemAnalysis)}
-                    </> :
-                    <>
-                      根据分析结果，您可以重点关注以下几个方面来提高：
-                      <ul style={{ paddingLeft: 20, marginTop: 10, marginBottom: 0 }}>
-                        <li>注意内容的丰富度和相关性，确保回答全面且紧扣主题</li>
-                        <li>关注表达的流畅性，避免语句生硬或重复</li>
-                        <li>提高语法结构的准确性，特别是复杂句型的使用</li>
-                        <li>丰富词汇用法，适当使用高级词汇和表达方式</li>
-                      </ul>
-                    </>
-                  }
+              {/* 问题分析模块 - 简化为纯文本显示 */}
+              {problemAnalysis && (
+                <div style={{ marginBottom: 20 }}>
+                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#ff4d4f' }}>问题分析</h3>
+                  <p>{typeof problemAnalysis === 'string' ? problemAnalysis : (problemAnalysis.summary || '')}</p>
                 </div>
-              </div>
+              )}
             </div>
           )}
           

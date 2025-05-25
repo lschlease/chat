@@ -254,6 +254,71 @@ const ChatInterface = () => {
       }
       
       // 根据messageType判断类型，保持与发送时的判断一致
+      // 音频转换为文字的情况
+      if (responseData.messageType === 'text' && responseData.audioData) {
+        // 准备输入分析和问题分析数据，同时包含音频信息
+        const inputAnalysis = {
+          fromAudio: true,
+          audioScore: responseData.audioData?.overall || 0,
+          text: responseData?.input_analysis || 
+            "您的语音输入已转换为文字并完成分析，以下是各个维度的评分和详细分析。"
+        };
+        
+        const problemAnalysis = responseData?.problem_analysis || {
+          summary: "根据语音和文字分析结果，您可以重点关注以下几个方面来提高：",
+          points: [
+            "提高发音的准确性和流利度",
+            "注意内容的丰富度和相关性，确保回答全面且紧扣主题",
+            "关注表达的流畅性，避免语句生硬或重复",
+            "提高语法结构的准确性，特别是复杂句型的使用",
+            "丰富词汇用法，适当使用高级词汇和表达方式"
+          ]
+        };
+        
+        // 处理文字评分数据
+        const processDimensionData = (dimension, name) => {
+          if (!dimension) return { name, value: 0, content: '暂无数据' };
+          
+          // 合并评分原因和文本表现，避免出现undefined
+          const reason = dimension.scoring_reason || '';
+          const performance = dimension.text_performance || '';
+          
+          // 智能合并，如果两者都有值则换行显示
+          const content = reason && performance 
+            ? `${reason}\n\n${performance}` 
+            : reason || performance || '暂无详细数据';
+            
+          return {
+            name,
+            value: dimension.score || 0,
+            content
+          };
+        };
+        
+        // 获取各维度数据
+        const dimensionAnalysis = responseData?.dimension_analysis || {};
+        
+        return [
+          ...newMessages,
+          ...(shouldAddUserMessage ? [userMessage] : []),
+          {
+            type: 'response',
+            messageType: 'text',
+            content: '语音文字评分完成',
+            score: null,
+            inputAnalysis,
+            problemAnalysis,
+            spiderData: [
+              processDimensionData(dimensionAnalysis?.content_abundance, '内容丰富度'),
+              processDimensionData(dimensionAnalysis?.content_relevance, '内容相关性'),
+              processDimensionData(dimensionAnalysis?.expression_fluidity, '表达流畅性'),
+              processDimensionData(dimensionAnalysis?.grammatical_structure, '语法结构'),
+              processDimensionData(dimensionAnalysis?.vocabulary_usage, '词汇用法')
+            ],
+            imageUrl: null
+          }
+        ];
+      }
       // 文字类型
       if (responseData.messageType === 'text') {
         // 优化处理维度分析数据
@@ -279,18 +344,69 @@ const ChatInterface = () => {
         // 获取各维度数据
         const dimensionAnalysis = responseData?.dimension_analysis || {};
         
-        // 准备输入分析和问题分析数据
-        const inputAnalysis = responseData?.input_analysis.content_relevance +   responseData?.input_analysis.response_text + responseData?.input_analysis.subjective_question + responseData?.input_analysis.word_count
-       
-        
-        const problemAnalysis = responseData?.problem_analysis || {
-          summary: responseData?.problem_analysis?.expected_content+ responseData?.problem_analysis.question_type,
-          points: [
-            responseData?.problem_analysis?.keywords[0],
-            responseData?.problem_analysis?.keywords[1],
-            responseData?.problem_analysis?.keywords[2],
-          ]
+        // 准备输入分析数据 - 安全地处理可能为undefined的值
+        const formatInputAnalysis = () => {
+          const contentRelevance = responseData?.input_analysis?.content_relevance || '';
+          const responseText = responseData?.input_analysis?.response_text || '';
+          const subjectiveQuestion = responseData?.input_analysis?.subjective_question || '';
+          
+          // 组合非空值，使用换行符分隔
+          const parts = [contentRelevance, responseText, subjectiveQuestion].filter(part => part);
+          
+          if (parts.length === 0) {
+            return "无法获取输入分析数据";
+          }
+          
+          return parts.join('\n\n');
         };
+        
+        // 准备问题分析数据 - 安全地处理可能为undefined的值
+        const formatProblemAnalysis = () => {
+          // 如果responseData中完全没有problem_analysis字段
+          if (!responseData?.problem_analysis) {
+            return {
+              summary: "暂无详细问题分析",
+              points: [
+                "请继续完善您的回答",
+                "注意语法和表达的准确性",
+                "尝试使用更丰富的词汇"
+              ]
+            };
+          }
+          
+          // 安全地获取summary
+          const expectedContent = responseData.problem_analysis.expected_content || '';
+          const questionType = responseData.problem_analysis.question_type || '';
+          const summary = [expectedContent, questionType].filter(part => part).join('\n') || "问题分析";
+          
+          // 安全地获取points
+          let points = [];
+          if (responseData.problem_analysis.keywords && Array.isArray(responseData.problem_analysis.keywords)) {
+            points = responseData.problem_analysis.keywords
+              .filter(keyword => keyword) // 过滤掉undefined和空字符串
+              .slice(0, 5); // 最多取5个关键词
+          }
+          
+          // 确保至少有一个point
+          if (points.length === 0) {
+            points = ["请继续完善您的回答"];
+          }
+          
+          return {
+            summary,
+            points
+          };
+        };
+        
+        // const inputAnalysis = formatInputAnalysis();
+        // const problemAnalysis = formatProblemAnalysis();
+
+        const inputAnalysis= responseData?.input_analysis?.content_relevance + '\n'+
+        responseData?.input_analysis?.response_text + '\n'+
+        responseData?.input_analysis?.subjective_question
+
+        const problemAnalysis=responseData?.question_analysis?.question_type  + '\n'+
+        responseData?.question_analysis?.expected_content
         
         return [
           ...newMessages,
@@ -299,7 +415,7 @@ const ChatInterface = () => {
             type: 'response',
             messageType: 'text',
             content: '文字完成评分',
-            score: responseData?.input_analysis?.overall_score,
+            score: responseData?.overall_score,
             inputAnalysis,
             problemAnalysis,
             spiderData: [
@@ -460,31 +576,19 @@ const ChatInterface = () => {
     setMessages(prev => [...prev, userMessage, { type: 'loading' }]);
   };
 
-  // 优化音频下载函数
-  const downloadAudio = (audioBlob, filename = 'recorded-audio.wav') => {
-    if (!audioBlob) {
-      console.warn('没有可下载的音频数据');
-      return;
-    }
-    
-    try {
-      const url = URL.createObjectURL(audioBlob);
-      const a = document.createElement('a');
-      a.style.display = 'none';
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      
-      // 清理URL对象
+  // 添加音频转文字函数
+  const convertSpeechToText = async (audioBlob) => {
+    // 这里可以集成实际的语音识别API，目前使用模拟数据
+    return new Promise((resolve) => {
+      console.log("正在将音频转换为文字...");
+      // 模拟语音识别延迟
       setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        console.log(`音频文件 "${filename}" 已保存`);
-      }, 100);
-    } catch (error) {
-      console.error('下载音频文件失败:', error);
-    }
+        // 这里可以替换为实际的语音识别API调用
+        const recognizedText = "这是从音频识别出的文字内容。实际使用时请集成语音识别API。";
+        console.log("音频转文字完成:", recognizedText);
+        resolve(recognizedText);
+      }, 500);
+    });
   };
 
   const handleSend = async () => {
@@ -506,22 +610,70 @@ const ChatInterface = () => {
     if (audioBlob) {
       // 将MP3转换为WAV格式
       const wavFile = await convertToWav(audioBlob);
-      localAudioBlob = wavFile; // 保存一份用于下载
+      localAudioBlob = wavFile; // 保存一份引用
       
-      formData.append('word', 'test');
-      formData.append('audio_file', wavFile);
+      // 创建用户消息（包含音频链接）
       userMessage = {
         type: 'user',
         content: '语音',
         audioUrl: URL.createObjectURL(audioBlob)
       };
-      apiUrl = API_CONFIG.audio;
-      setAudioBlob(null);
-      messageType = 'audio';
       
-      // 下载音频文件
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      downloadAudio(localAudioBlob, `recorded-audio-${timestamp}.wav`);
+      // 显示loading
+      addLoadingMessage(userMessage);
+      setIsLoading(true);
+      
+      try {
+        // 首先发送到音频接口获取评分
+        const audioFormData = new FormData();
+        audioFormData.append('word', 'test');
+        audioFormData.append('audio_file', wavFile);
+        
+        const audioResponse = await request(API_CONFIG.audio, audioFormData);
+        console.log("Audio Response:", audioResponse);
+        
+        // 然后将音频转换为文字
+        const recognizedText = await convertSpeechToText(audioBlob);
+        
+        // 发送文字到文字接口
+        const textFormData = new FormData();
+        const parms = {
+          quesstion: currentQuestion === 1 ? '第一题：说说你对人生的感悟 （2分钟）' : '第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）',
+          text: recognizedText,
+          type: currentQuestion === 1 ? "主观题" : "客观题",
+          // 添加音频评分信息，方便展示在文字结果中
+          audioScore: audioResponse.data?.overall || 0,
+          audioAnalysis: audioResponse.data || {}
+        };
+        textFormData.append('text', JSON.stringify(parms));
+        textFormData.append('image', wavFile);
+        
+        const textResponse = await request(API_CONFIG.text, textFormData);
+        console.log("Text Response:", textResponse);
+        
+        // 合并音频和文字的响应
+        const combinedResponse = {
+          ...textResponse,
+          messageType: 'text', // 按文字类型处理
+          audioData: audioResponse.data // 保存音频评分数据
+        };
+        
+        // 更新消息列表
+        addMessage(userMessage, combinedResponse);
+      } catch (error) {
+        console.error('处理音频失败:', error);
+        message.error('处理音频失败，请稍后重试');
+        addMessage(userMessage, {
+          isJson: false,
+          text: '处理音频失败，请稍后重试',
+          messageType: 'text',
+          error: true
+        });
+      } finally {
+        setAudioBlob(null);
+        setIsLoading(false);
+      }
+      return; // 提前返回，避免执行后面的代码
     } else if (imageFile) {
       formData.append('image', imageFile);
       userMessage = {
@@ -649,6 +801,8 @@ const ChatInterface = () => {
       spiderData={msg.spiderData} 
       showRadarChart={true} 
       error={msg.error || false} 
+      inputAnalysis={msg.inputAnalysis}
+      problemAnalysis={msg.problemAnalysis}
     />;
   };
 
