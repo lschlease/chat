@@ -186,7 +186,13 @@ const ChatInterface = () => {
       });
 
       if (!response.ok) {
-        throw new Error('网络请求失败');
+        console.error('网络请求失败, 状态码:', response.status);
+        // 返回带有错误信息的对象，保持与其他返回格式一致
+        return {
+          isJson: false,
+          text: `请求失败，状态码: ${response.status}`,
+          error: true
+        };
       }
 
       // 先获取原始响应文本
@@ -213,7 +219,8 @@ const ChatInterface = () => {
       console.error('Request error:', error);
       return {
         isJson: false,
-        text: '请求失败，请稍后重试'
+        text: '请求失败，请稍后重试',
+        error: true
       };
     }
   };
@@ -226,7 +233,26 @@ const ChatInterface = () => {
       // 如果最后一条消息不是用户消息，才添加用户消息
       const lastMessage = newMessages[newMessages.length - 1];
       const shouldAddUserMessage = !lastMessage || lastMessage.type !== 'user';
+
       console.log("ResponseData:999", responseData);
+      
+      // 检查是否有错误
+      if (responseData.error) {
+        return [
+          ...newMessages,
+          ...(shouldAddUserMessage ? [userMessage] : []),
+          {
+            type: 'response',
+            messageType: responseData.messageType || 'unknown',
+            content: responseData.text || '请求失败，请稍后重试',
+            score: null,
+            spiderData: null,
+            imageUrl: null,
+            error: true
+          }
+        ];
+      }
+      
       // 根据messageType判断类型，保持与发送时的判断一致
       // 文字类型
       if (responseData.messageType === 'text') {
@@ -235,6 +261,7 @@ const ChatInterface = () => {
           ...(shouldAddUserMessage ? [userMessage] : []),
           {
             type: 'response',
+            messageType: 'text',
             content: '文字完成评分',
             score: responseData.data?.data?.overall || 0,
             spiderData: [
@@ -250,64 +277,102 @@ const ChatInterface = () => {
       }
       // 图片类型
       if (responseData.messageType === 'image') {
-
-        let good_words_sentences = responseData.good_words_sentences.map(item=>{
-          return {
-            name:item.position,
-            value:item.priority,
-            content:item.sentence
+        // 安全地获取数据，避免undefined错误
+        let depth_analysis_table = [];
+        let good_words_sentences = [];
+        let image_text_processing = [];
+        
+        try {
+          // 检查是否存在数据并安全处理
+          if (responseData.depth_analysis_table && Array.isArray(responseData.depth_analysis_table)) {
+            depth_analysis_table = responseData.depth_analysis_table.map(item => {
+              return {
+                name: item.name || '',
+                value: item.value || null,
+                content: item.content || ''
+              }
+            });
           }
-        })
-
-
-        let image_text_processing = responseData.image_text_processing.paragraphs.map(item=>{
-          return {
-            name:item.paragraph_number,
-            value:item.value,
-            content:item.content
+        } catch (error) {
+          console.error("处理depth_analysis_table时出错:", error);
+        }
+        
+        try {
+          if (responseData.good_words_sentences && Array.isArray(responseData.good_words_sentences)) {
+            good_words_sentences = responseData.good_words_sentences.map(item => {
+              return {
+                name: item.position || '',
+                value: item.priority || null,
+                content: item.sentence || ''
+              }
+            });
           }
-        })
+        } catch (error) {
+          console.error("处理good_words_sentences时出错:", error);
+        }
+        
+        try {
+          if (responseData.image_text_processing && 
+              responseData.image_text_processing.paragraphs && 
+              Array.isArray(responseData.image_text_processing.paragraphs)) {
+            image_text_processing = responseData.image_text_processing.paragraphs.map(item => {
+              return {
+                name: item.paragraph_number || '',
+                value: item.value || null,
+                content: item.content || ''
+              }
+            });
+          }
+        } catch (error) {
+          console.error("处理image_text_processing时出错:", error);
+        }
+        
+        console.log("depth_analysis_table", depth_analysis_table);
+        console.log("good_words_sentences", good_words_sentences);
+        console.log("image_text_processing", image_text_processing);
 
         return [
           ...newMessages,
           ...(shouldAddUserMessage ? [userMessage] : []),
           {
             type: 'response',
-            content: null,
-            score: 100,
+            messageType: 'image',
+            content: '图片评分完成',
+            score: null,
             spiderData: [
               //总评
-              { name: '整体语言风格', value: null, content: responseData?.overall_language_style },
+              { name: '整体语言风格', value: null, content: responseData?.overall_language_style || '暂无数据' },
               // 深度分析表
-              { name: '情感传递', value: null, content: responseData?.depth_analysis_table[0]?.emotion_transmission},
-              { name: '语言亮点', value: null, content: responseData?.depth_analysis_table[0]?.language_highlights},
-              { name: '学习建议', value: null, content: responseData?.depth_analysis_table[0]?.learning_suggestions },
-              { name: '句子', value: null, content: responseData?.depth_analysis_table[0]?.sentence },
+              { name: '情感传递', value: null, content: responseData?.depth_analysis_table?.[0]?.emotion_transmission || '暂无数据'},
+              { name: '语言亮点', value: null, content: responseData?.depth_analysis_table?.[0]?.language_highlights || '暂无数据'},
+              { name: '学习建议', value: null, content: responseData?.depth_analysis_table?.[0]?.learning_suggestions || '暂无数据' },
+              { name: '句子', value: null, content: responseData?.depth_analysis_table?.[0]?.sentence || '暂无数据' },
               // 好词好句
-              ...good_words_sentences,
+              ...(good_words_sentences.length > 0 ? good_words_sentences : [{ name: '好词好句', value: null, content: '暂无数据' }]),
               // 图像文本处理
-              ...image_text_processing
+              ...(image_text_processing.length > 0 ? image_text_processing : [{ name: '图像文本', value: null, content: '暂无数据' }])
             ],
             imageUrl: responseData.imageUrl || null
           }
-
         ];
       }
       // 频频/音频类型
       if (responseData.messageType === 'audio') {
+        console.log("responseData:3333", responseData?.data?.overall);
         return [
           ...newMessages,
           ...(shouldAddUserMessage ? [userMessage] : []),
           {
             type: 'response',
+            messageType: 'audio',
             content: '语音评分完成',
-            score: responseData.data?.data?.overall || 0,
+            score: responseData?.data?.overall || null,
             spiderData: [
-              { name: '流利度得分', value: responseData.data?.data?.fluency?.overall || 0 },
-              { name: '完整度得分', value: responseData.data?.data?.integrity || 0 },
-              { name: '准确度得分', value: responseData.data?.data?.accuracy || 0 },
-              { name: '声调得分', value: responseData.data?.data?.tone || 0 },
-              { name: '无调发音得分', value: responseData.data?.data?.phn || 0 }
+              { name: '流利度得分', value: responseData?.data?.fluency?.overall || '0' ,content: null},
+              { name: '完整度得分', value: responseData?.data?.integrity || '0' ,content: null},
+              { name: '准确度得分', value: responseData?.data?.accuracy || '0' ,content: null},
+              { name: '声调得分', value: responseData?.data?.tone || '0' ,content: null},
+              { name: '无调发音得分', value: responseData?.data?.phn || '0' ,content: null}
             ],
             imageUrl: null
           }
@@ -319,7 +384,8 @@ const ChatInterface = () => {
         ...(shouldAddUserMessage ? [userMessage] : []),
         {
           type: 'response',
-          content: '未知类型数据',
+          messageType: 'unknown',
+          content: responseData.text || '未知类型数据',
           score: null,
           spiderData: null,
           imageUrl: null
@@ -351,7 +417,7 @@ const ChatInterface = () => {
     if (audioBlob) {
       // 将MP3转换为WAV格式
       const wavFile = await convertToWav(audioBlob);
-
+      
       formData.append('word', 'test');
       formData.append('audio_file', wavFile);
       userMessage = {
@@ -389,7 +455,7 @@ const ChatInterface = () => {
 
     // 清除输入
     setInputValue('');
-
+    
     // 显示loading
     addLoadingMessage(userMessage);
     setIsLoading(true);
@@ -398,28 +464,49 @@ const ChatInterface = () => {
       // 发送请求
       const response = await request(apiUrl, formData);
       console.log("Response:", response);
-
+      
       // 确保响应数据包含消息类型信息
       let responseWithType = response;
-      if (response.isJson) {
-        try {
-          const parsedData = JSON.parse(response.data);
-          responseWithType = { ...parsedData, messageType };
-        } catch (parseError) {
+      
+      // 检查响应是否包含错误
+      if (response.error) {
+        // 返回错误信息
+        addMessage(userMessage, {
+          isJson: false,
+          text: response.text || '请求失败，请稍后重试',
+          messageType,
+          error: true
+        });
+      } else {
+        // 正常处理响应
+        if (response.isJson) {
+          try {
+            let parsedData;
+            if (typeof response.data === 'string') {
+              parsedData = JSON.parse(response.data);
+            } else {
+              parsedData = response.data;
+            }
+            responseWithType = { ...parsedData, messageType };
+          } catch (parseError) {
+            console.error("解析数据失败:", parseError);
+            responseWithType = { ...response, messageType, error: true };
+          }
+        } else {
           responseWithType = { ...response, messageType };
         }
-      } else {
-        responseWithType = { ...response, messageType };
+        
+        // 更新消息列表
+        addMessage(userMessage, responseWithType);
       }
-
-      // 更新消息列表
-      addMessage(userMessage, responseWithType);
     } catch (error) {
+      console.error('发送消息失败:', error);
       message.error('发送消息失败，请稍后重试');
       addMessage(userMessage, {
         isJson: false,
         text: '请求失败，请稍后重试',
-        messageType
+        messageType,
+        error: true
       });
     } finally {
       setIsLoading(false);
@@ -463,11 +550,23 @@ const ChatInterface = () => {
     
     // 根据消息类型决定是否显示雷达图
     if (msg.messageType === 'text' || msg.messageType === 'image') {
-      return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} showRadarChart={false} />;
+      return <SystemResponse 
+        content={msg.content} 
+        score={msg.score} 
+        spiderData={msg.spiderData} 
+        showRadarChart={false} 
+        error={msg.error || false} 
+      />;
     }
     
     // 音频类型或其他类型显示雷达图
-    return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} showRadarChart={true} />;
+    return <SystemResponse 
+      content={msg.content} 
+      score={msg.score} 
+      spiderData={msg.spiderData} 
+      showRadarChart={true} 
+      error={msg.error || false} 
+    />;
   };
 
   return (

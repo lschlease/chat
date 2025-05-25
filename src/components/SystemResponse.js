@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
-import { Button, Divider } from 'antd';
+import { Button, Divider, Alert } from 'antd';
 import { SoundOutlined, PauseOutlined } from '@ant-design/icons';
 import SpiderChart from './SpiderChart';
 import EvaluationCard from './EvaluationCard';
 import '../styles/chat.css';
 
-const SystemResponse = ({ content, score, spiderData, showRadarChart = true }) => {
+const SystemResponse = ({ content, score, spiderData, showRadarChart = true, error }) => {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const handlePlayAudio = () => {
@@ -78,28 +78,46 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true }) =
     );
   };
 
-  const groupedData = groupData(spiderData);
+  // 安全地分组数据，确保即使数据结构异常也不会崩溃
+  const groupedData = spiderData ? groupData(spiderData) : {};
 
   return (
     <div className="system-message">
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-        <div style={{ margin: 0, flex: 1 }}>{content}</div>
-        {/* 语音播放按钮已隐藏
-        <Button 
-          type="text" 
-          icon={isPlaying ? <PauseOutlined /> : <SoundOutlined />} 
-          onClick={handlePlayAudio}
-          className="primary-button"
+      {/* 错误提示 */}
+      {error && (
+        <Alert
+          message="请求异常"
+          description={content || "服务器暂时无法响应，请稍后再试"}
+          type="error"
+          showIcon
+          style={{ marginBottom: '15px' }}
         />
-        */}
-      </div>
-      {!score ?  (
+      )}
+      
+      {/* 正常内容 */}
+      {!error && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div style={{ margin: 0, flex: 1 }}>{content}</div>
+          {/* 语音播放按钮已隐藏
+          <Button 
+            type="text" 
+            icon={isPlaying ? <PauseOutlined /> : <SoundOutlined />} 
+            onClick={handlePlayAudio}
+            className="primary-button"
+          />
+          */}
+        </div>
+      )}
+      
+      {score ?  (
         <div className="score-container">
           <div className="score-title">AI 评分</div>
           <div className="score-value">{score}</div>
         </div>
       ):''}
-      {spiderData && (
+      
+      {/* 只有在非错误状态且有数据时才显示图表和数据 */}
+      {!error && spiderData && (
         <div style={{ marginTop: 16 }}>
           {showRadarChart && groupedData.audioData && (
             <div className="spider-chart">
