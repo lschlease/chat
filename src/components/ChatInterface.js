@@ -51,7 +51,7 @@ const ChatInterface = () => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       audioChunks.current = [];
-      
+
       recorder.ondataavailable = (e) => {
         audioChunks.current.push(e.data);
       };
@@ -91,34 +91,34 @@ const ChatInterface = () => {
     try {
       // 创建音频上下文
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      
+
       // 解码音频数据
       const arrayBuffer = await audioBlob.arrayBuffer();
       const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-      
+
       // 创建一个离线音频上下文以生成WAV
       const offlineContext = new OfflineAudioContext(
         audioBuffer.numberOfChannels,
         audioBuffer.length,
         audioBuffer.sampleRate
       );
-      
+
       // 创建音频源
       const source = offlineContext.createBufferSource();
       source.buffer = audioBuffer;
       source.connect(offlineContext.destination);
       source.start(0);
-      
+
       // 渲染音频数据
       const renderedBuffer = await offlineContext.startRendering();
-      
+
       // 将AudioBuffer转换为WAV格式
       const wavBlob = audioBufferToWav(renderedBuffer);
-      
+
       // 创建WAV文件
       const wavFile = new File([wavBlob], 'recording.wav', { type: 'audio/wav' });
       console.log("WAV文件创建成功:", wavFile);
-      
+
       return wavFile;
     } catch (error) {
       console.error("转换WAV失败:", error);
@@ -126,22 +126,22 @@ const ChatInterface = () => {
       return new File([audioBlob], 'recording.mp3', { type: 'audio/mp3' });
     }
   };
-  
+
   // AudioBuffer转换为WAV格式
   function audioBufferToWav(buffer) {
     const numOfChan = buffer.numberOfChannels;
     const length = buffer.length * numOfChan * 2;
     const sampleRate = buffer.sampleRate;
-    
+
     // 创建WAV文件头
     const wav = new ArrayBuffer(44 + length);
     const view = new DataView(wav);
-    
+
     // RIFF标识
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + length, true);
     writeString(view, 8, 'WAVE');
-    
+
     // fmt数据块
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true); // 数据块大小
@@ -151,11 +151,11 @@ const ChatInterface = () => {
     view.setUint32(28, sampleRate * numOfChan * 2, true); // 每秒字节数
     view.setUint16(32, numOfChan * 2, true); // 数据块对齐
     view.setUint16(34, 16, true); // 位深度
-    
+
     // 数据块
     writeString(view, 36, 'data');
     view.setUint32(40, length, true);
-    
+
     // 写入PCM采样数据
     const offset = 44;
     for (let i = 0; i < buffer.numberOfChannels; i++) {
@@ -166,10 +166,10 @@ const ChatInterface = () => {
         view.setInt16(index, sample < 0 ? sample * 0x8000 : sample * 0x7FFF, true);
       }
     }
-    
+
     return new Blob([view], { type: 'audio/wav' });
   }
-  
+
   // 写入字符串到DataView
   function writeString(view, offset, string) {
     for (let i = 0; i < string.length; i++) {
@@ -226,21 +226,103 @@ const ChatInterface = () => {
       // 如果最后一条消息不是用户消息，才添加用户消息
       const lastMessage = newMessages[newMessages.length - 1];
       const shouldAddUserMessage = !lastMessage || lastMessage.type !== 'user';
+      console.log("ResponseData:999", responseData);
+      // 根据messageType判断类型，保持与发送时的判断一致
+      // 文字类型
+      if (responseData.messageType === 'text') {
+        return [
+          ...newMessages,
+          ...(shouldAddUserMessage ? [userMessage] : []),
+          {
+            type: 'response',
+            content: '文字完成评分',
+            score: responseData.data?.data?.overall || 0,
+            spiderData: [
+              { name: '流利度得分', value: responseData.data?.data?.fluency?.overall || 0 },
+              { name: '完整度得分', value: responseData.data?.data?.integrity || 0 },
+              { name: '准确度得分', value: responseData.data?.data?.accuracy || 0 },
+              { name: '声调得分', value: responseData.data?.data?.tone || 0 },
+              { name: '无调发音得分', value: responseData.data?.data?.phn || 0 }
+            ],
+            imageUrl: null
+          }
+        ];
+      }
+      // 图片类型
+      if (responseData.messageType === 'image') {
 
+        let good_words_sentences = responseData.good_words_sentences.map(item=>{
+          return {
+            name:item.position,
+            value:item.priority,
+            content:item.sentence
+          }
+        })
+
+
+        let image_text_processing = responseData.image_text_processing.paragraphs.map(item=>{
+          return {
+            name:item.paragraph_number,
+            value:item.value,
+            content:item.content
+          }
+        })
+
+        return [
+          ...newMessages,
+          ...(shouldAddUserMessage ? [userMessage] : []),
+          {
+            type: 'response',
+            content: null,
+            score: 100,
+            spiderData: [
+              //总评
+              { name: '整体语言风格', value: null, content: responseData?.overall_language_style },
+              // 深度分析表
+              { name: '情感传递', value: null, content: responseData?.depth_analysis_table[0]?.emotion_transmission},
+              { name: '语言亮点', value: null, content: responseData?.depth_analysis_table[0]?.language_highlights},
+              { name: '学习建议', value: null, content: responseData?.depth_analysis_table[0]?.learning_suggestions },
+              { name: '句子', value: null, content: responseData?.depth_analysis_table[0]?.sentence },
+              // 好词好句
+              ...good_words_sentences,
+              // 图像文本处理
+              ...image_text_processing
+            ],
+            imageUrl: responseData.imageUrl || null
+          }
+
+        ];
+      }
+      // 频频/音频类型
+      if (responseData.messageType === 'audio') {
+        return [
+          ...newMessages,
+          ...(shouldAddUserMessage ? [userMessage] : []),
+          {
+            type: 'response',
+            content: '语音评分完成',
+            score: responseData.data?.data?.overall || 0,
+            spiderData: [
+              { name: '流利度得分', value: responseData.data?.data?.fluency?.overall || 0 },
+              { name: '完整度得分', value: responseData.data?.data?.integrity || 0 },
+              { name: '准确度得分', value: responseData.data?.data?.accuracy || 0 },
+              { name: '声调得分', value: responseData.data?.data?.tone || 0 },
+              { name: '无调发音得分', value: responseData.data?.data?.phn || 0 }
+            ],
+            imageUrl: null
+          }
+        ];
+      }
+      // 兜底
       return [
         ...newMessages,
         ...(shouldAddUserMessage ? [userMessage] : []),
         {
           type: 'response',
-          content: responseData.isJson ? '语音评分完成' : responseData.text,
-          score: responseData.isJson ? responseData.data?.data?.overall || 0 : null,
-          spiderData: responseData.isJson ? [
-            { name: '流利度得分', value: responseData.data?.data?.fluency?.overall || 0 },
-            { name: '完整度得分', value: responseData.data?.data?.integrity || 0 },
-            { name: '准确度得分', value: responseData.data?.data?.accuracy || 0 },
-            { name: '声调得分', value: responseData.data?.data?.tone || 0 },
-            { name: '无调发音得分', value: responseData.data?.data?.phn || 0 }
-          ] : null
+          content: '未知类型数据',
+          score: null,
+          spiderData: null,
+          imageUrl: null
         }
       ];
     });
@@ -262,12 +344,14 @@ const ChatInterface = () => {
     let formData = new FormData();
     let userMessage = null;
     let apiUrl = '';
+    // 记录消息类型，与接收时判断保持一致
+    let messageType = '';
 
     // 准备请求数据
     if (audioBlob) {
       // 将MP3转换为WAV格式
       const wavFile = await convertToWav(audioBlob);
-      
+
       formData.append('word', 'test');
       formData.append('audio_file', wavFile);
       userMessage = {
@@ -277,6 +361,7 @@ const ChatInterface = () => {
       };
       apiUrl = API_CONFIG.audio;
       setAudioBlob(null);
+      messageType = 'audio';
     } else if (imageFile) {
       formData.append('image', imageFile);
       userMessage = {
@@ -286,18 +371,25 @@ const ChatInterface = () => {
       };
       apiUrl = API_CONFIG.image;
       setImageFile(null);
+      messageType = 'image';
     } else {
-      formData.append('text', inputValue);
+      const parms = {
+        '题目': currentQuestion === 1 ? '第一题：说说你对人生的感悟 （2分钟）' : '第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）',
+        "回答": inputValue,
+        "type": currentQuestion === 1 ? "主观题" : "客观题"
+      }
+      formData.append('text', JSON.stringify(parms));
       userMessage = {
         type: 'user',
         content: inputValue
       };
       apiUrl = API_CONFIG.text;
+      messageType = 'text';
     }
 
     // 清除输入
     setInputValue('');
-    
+
     // 显示loading
     addLoadingMessage(userMessage);
     setIsLoading(true);
@@ -305,13 +397,29 @@ const ChatInterface = () => {
     try {
       // 发送请求
       const response = await request(apiUrl, formData);
+      console.log("Response:", response);
+
+      // 确保响应数据包含消息类型信息
+      let responseWithType = response;
+      if (response.isJson) {
+        try {
+          const parsedData = JSON.parse(response.data);
+          responseWithType = { ...parsedData, messageType };
+        } catch (parseError) {
+          responseWithType = { ...response, messageType };
+        }
+      } else {
+        responseWithType = { ...response, messageType };
+      }
+
       // 更新消息列表
-      addMessage(userMessage, response);
+      addMessage(userMessage, responseWithType);
     } catch (error) {
       message.error('发送消息失败，请稍后重试');
       addMessage(userMessage, {
         isJson: false,
-        text: '请求失败，请稍后重试'
+        text: '请求失败，请稍后重试',
+        messageType
       });
     } finally {
       setIsLoading(false);
@@ -343,7 +451,23 @@ const ChatInterface = () => {
         </div>
       );
     }
-    return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} />;
+    // 新增：图片类型渲染
+    if (msg.imageUrl) {
+      return (
+        <div className="system-message">
+          <div>图片已返回：</div>
+          <img src={msg.imageUrl} alt="返回图片" style={{ maxWidth: '300px', marginTop: '8px' }} />
+        </div>
+      );
+    }
+    
+    // 根据消息类型决定是否显示雷达图
+    if (msg.messageType === 'text' || msg.messageType === 'image') {
+      return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} showRadarChart={false} />;
+    }
+    
+    // 音频类型或其他类型显示雷达图
+    return <SystemResponse content={msg.content} score={msg.score} spiderData={msg.spiderData} showRadarChart={true} />;
   };
 
   return (
@@ -358,10 +482,10 @@ const ChatInterface = () => {
           if (item.isWelcome) {
             return (
               <div style={{ textAlign: 'center', padding: '40px 0' }}>
-                <img 
+                <img
                   src={welcomeIcon}
-                  alt="欢迎图标" 
-                  style={{ width: '248px', height: 'auto', marginBottom: '16px' }} 
+                  alt="欢迎图标"
+                  style={{ width: '248px', height: 'auto', marginBottom: '16px' }}
                 />
                 {/* <h2 style={{ color: '#1890ff', margin: 0 }}>很高兴为您服务</h2> */}
 
@@ -371,8 +495,8 @@ const ChatInterface = () => {
                   <div>
                     <h2 style={{ color: '#222', margin: '20px 0' }}>第一题：说说你对人生的感悟 （2分钟）</h2>
                     <div style={{ marginBottom: '20px' }}>
-                      <Button 
-                        type="primary" 
+                      <Button
+                        type="primary"
                         onClick={() => setCurrentQuestion(2)}
                         style={{ marginRight: '10px' }}
                       >
@@ -384,8 +508,8 @@ const ChatInterface = () => {
                   <div>
                     <h2 style={{ color: '#222', margin: '20px 0' }}>第二题：朗读 : 人们说，时间是组成生命的特殊材料。花开花落，冰融水流，都是时间在流 逝。面对"铁面无私"的时间，每一个生命都是有限的。所以，要使自己的生命 变得更有价值，我们就应该争分夺秒地去实现既定目标，不断地完善自我、超越 自我。时间对于我们每个人来说，都是平等、公正的，关键在于你能否把握住时 间，并充分利用好它。如果你能做到与时间赛跑，有速度、有目标地学习和工作， 你的生活就会变得丰富多彩。时间的脚步匆匆，它不会因为我们有许多事情需要 处理而稍停片刻。要知道，光阴不等人，谁对时间吝啬，时间反而对谁更慷慨。只有学会了与时间赛跑，你才能成为时间的主人。 （2分钟）</h2>
                     <div style={{ marginBottom: '20px' }}>
-                      <Button 
-                        type="primary" 
+                      <Button
+                        type="primary"
                         onClick={() => setCurrentQuestion(1)}
                         style={{ marginRight: '10px' }}
                       >

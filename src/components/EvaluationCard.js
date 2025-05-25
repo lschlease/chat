@@ -1,7 +1,8 @@
 import React from 'react';
 import { Card } from 'antd';
 
-const EvaluationCard = ({ name, value }) => {
+const EvaluationCard = ({ name, value, content }) => {
+  
   const getEvaluation = (value) => {
     if (value >= 80) {
       return {
@@ -37,15 +38,16 @@ const EvaluationCard = ({ name, value }) => {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <h4 style={{ margin: 0, color: '#1890ff' }}>{name}</h4>
-        <div style={{ textAlign: 'right' }}>
-          <p style={{ margin: 0, fontSize: '14px' }}>
+        {!value?'':  <p style={{ margin: 0, fontSize: '14px' }}>
             得分：<span style={{ color: evaluation.color, fontWeight: 'bold' }}>{value}</span>
-          </p>
-          {/* <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
-            {evaluation.text}
-          </p> */}
-        </div>
+          </p>}
+
       </div>
+      <div >        
+          <p style={{ margin: '4px 0 0 0', fontSize: '12px', color: '#666' }}>
+            {content}
+          </p>
+        </div>
     </Card>
   );
 };
