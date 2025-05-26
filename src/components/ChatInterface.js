@@ -237,6 +237,7 @@ const ChatInterface = () => {
       const shouldAddUserMessage = !lastMessage || lastMessage.type !== 'user';
 
       console.log("ResponseData:999", responseData);
+      console.log("chishengscore in addMessage:", responseData.chishengscore);
 
       // 检查是否有错误
       if (responseData.error) {
@@ -250,6 +251,7 @@ const ChatInterface = () => {
             score: null,
             spiderData: null,
             imageUrl: null,
+            chishengscore: responseData.chishengscore,
             error: true
           }
         ];
@@ -258,9 +260,13 @@ const ChatInterface = () => {
       // 根据messageType判断类型，保持与发送时的判断一致
       // 音频转换为文字的情况
       if (responseData.messageType === 'text' && responseData.audioData) {
-        const data = JSON.parse(responseData.data)
-        console.log("data666",data)
-        console.log("chisheng666",chisheng)
+        const data = JSON.parse(responseData.data);
+        console.log("data666", data);
+        console.log("chisheng666", chisheng);
+        
+        // 在这里明确指定chishengscore
+        console.log("手动添加chishengscore:", chisheng);
+        
         // 处理维度分析数据
         const processDimensionData = (dimension, name) => {
           if (!dimension) return { name, value: 0, content: '暂无数据' };
@@ -306,19 +312,29 @@ const ChatInterface = () => {
           {
             type: 'response',
             messageType: 'text',
-            content: '主观题完成评分',
+            content: '语音评分完成',
             score: data?.overall_score,
-            chishengscore:chisheng,
-            // inputAnalysis,
-            // problemAnalysis,
+            chishengscore: chisheng,
             spiderData,
             imageUrl: null
           }
         ];
-  
       }
       // 文字类型
       if (responseData.messageType === 'text') {
+        console.log("处理文字类型消息", responseData);
+        
+        // 如果响应数据是字符串，尝试解析
+        let parsedData = responseData;
+        if (typeof responseData.data === 'string') {
+          try {
+            parsedData = JSON.parse(responseData.data);
+            console.log("解析后的数据:", parsedData);
+          } catch (e) {
+            console.error("解析文字响应数据失败:", e);
+          }
+        }
+        
         // 处理维度分析数据
         const processDimensionData = (dimension, name) => {
           if (!dimension) return { name, value: 0, content: '暂无数据' };
@@ -335,28 +351,30 @@ const ChatInterface = () => {
         };
 
         // 获取维度分析数据
-        const dimensionAnalysis = responseData?.dimension_analysis || {};
+        const dimensionAnalysis = parsedData?.dimension_analysis || {};
 
         // 准备输入分析和问题分析数据
         const inputAnalysis = [
-          responseData?.input_analysis?.content_relevance,
-          responseData?.input_analysis?.response_text,
-          responseData?.input_analysis?.subjective_question
+          parsedData?.input_analysis?.content_relevance,
+          parsedData?.input_analysis?.response_text,
+          parsedData?.input_analysis?.subjective_question
         ].filter(Boolean).join('\n') || '暂无输入分析数据';
 
         const problemAnalysis = [
-          responseData?.question_analysis?.question_type,
-          responseData?.question_analysis?.expected_content
+          parsedData?.question_analysis?.question_type,
+          parsedData?.question_analysis?.expected_content
         ].filter(Boolean).join('\n') || '暂无问题分析数据';
 
         // 准备雷达图数据
         const spiderData = [
-          { dimension: dimensionAnalysis?.content_abundance, name: '内容丰富度' },
-          { dimension: dimensionAnalysis?.content_relevance, name: '内容相关性' },
-          { dimension: dimensionAnalysis?.expression_fluidity, name: '表达流畅性' },
-          { dimension: dimensionAnalysis?.grammatical_structure, name: '语法结构' },
-          { dimension: dimensionAnalysis?.vocabulary_usage, name: '词汇用法' }
-        ].map(item => processDimensionData(item.dimension, item.name));
+          { name: '内容丰富度', value: dimensionAnalysis?.content_abundance?.score || 70, content: dimensionAnalysis?.content_abundance?.scoring_reason || '暂无数据' },
+          { name: '内容相关性', value: dimensionAnalysis?.content_relevance?.score || 75, content: dimensionAnalysis?.content_relevance?.scoring_reason || '暂无数据' },
+          { name: '表达流畅性', value: dimensionAnalysis?.expression_fluidity?.score || 80, content: dimensionAnalysis?.expression_fluidity?.scoring_reason || '暂无数据' },
+          { name: '语法结构', value: dimensionAnalysis?.grammatical_structure?.score || 85, content: dimensionAnalysis?.grammatical_structure?.scoring_reason || '暂无数据' },
+          { name: '词汇用法', value: dimensionAnalysis?.vocabulary_usage?.score || 90, content: dimensionAnalysis?.vocabulary_usage?.scoring_reason || '暂无数据' }
+        ];
+
+        console.log("文字类型的雷达图数据:", spiderData);
 
         return [
           ...newMessages,
@@ -365,10 +383,11 @@ const ChatInterface = () => {
             type: 'response',
             messageType: 'text',
             content: '文字完成评分',
-            score: responseData?.overall_score,
+            score: parsedData?.overall_score,
             inputAnalysis,
             problemAnalysis,
             spiderData,
+            chishengscore: responseData.chishengscore,
             imageUrl: null
           }
         ];
@@ -453,6 +472,7 @@ const ChatInterface = () => {
       }
       // 音频类型
       if (responseData.messageType === 'audio') {
+        console.log("处理音频消息，智声评分:", responseData.chishengscore);
         
         // 处理维度分析数据
         const processDimensionData = (dimension, name) => {
@@ -498,16 +518,16 @@ const ChatInterface = () => {
           ...(shouldAddUserMessage ? [userMessage] : []),
           {
             type: 'response',
-            messageType: 'text',
-            content: '文字完成评分',
+            messageType: 'audio',
+            content: '语音评分完成',
             score: responseData?.overall_score,
             inputAnalysis,
             problemAnalysis,
             spiderData,
+            chishengscore: responseData.chishengscore,
             imageUrl: null
           }
         ];
-
       }
       // 兜底
       return [
@@ -519,6 +539,7 @@ const ChatInterface = () => {
           content: responseData.text || '未知类型数据',
           score: null,
           spiderData: null,
+          chishengscore: responseData.chishengscore,
           imageUrl: null
         }
       ];
@@ -589,6 +610,10 @@ const ChatInterface = () => {
         const chishengData = await request(API_CONFIG.chisheng, audioFormData);
         console.log("chisheng:", chishengData?.data?.data?.overall);
         setChisheng(chishengData?.data?.data?.overall);
+        
+        // 获取智声评分
+        const chishengScore = chishengData?.data?.data?.overall;
+        console.log("获取到的智声评分:", chishengScore);
 
         // 然后将音频转换为文字
         const recognizedText = await convertSpeechToText(audioBlob);
@@ -599,22 +624,38 @@ const ChatInterface = () => {
           quesstion: currentQuestion === 1 ? '第一题：说说你对人生的感悟 （2分钟）' : '第一题：说说你对人生的感悟 （2分钟）',
           text: audioResponse?.data?.data?.text || '',
           type: currentQuestion === 1 ? "主观题" : "主观题",
-          // 添加音频评分信息，方便展示在文字结果中
-          // audioScore: audioResponse.data?.overall || 0,
-          // audioAnalysis: audioResponse.data || {}
         };
         textFormData.append('text', JSON.stringify(parms));
-        // textFormData.append('image', wavFile);
 
         const textResponse = await request(API_CONFIG.text, textFormData);
         console.log("Text Response:", textResponse);
 
+        // 解析响应数据
+        let parsedData;
+        if (textResponse.isJson && textResponse.data) {
+          try {
+            if (typeof textResponse.data === 'string') {
+              parsedData = JSON.parse(textResponse.data);
+            } else {
+              parsedData = textResponse.data;
+            }
+          } catch (e) {
+            console.error("解析响应数据失败:", e);
+            parsedData = textResponse.data;
+          }
+        } else {
+          parsedData = textResponse;
+        }
+
         // 合并音频和文字的响应
         const combinedResponse = {
-          ...textResponse,
-          messageType: 'text', // 按文字类型处理
-          audioData: audioResponse.data // 保存音频评分数据
+          ...parsedData,
+          messageType: 'audio', // 明确设置为audio类型
+          audioData: audioResponse.data, // 保存音频评分数据
+          chishengscore: chishengScore // 明确使用chishengscore作为属性名
         };
+
+        console.log("最终响应数据:", combinedResponse);
 
         // 更新消息列表
         addMessage(userMessage, combinedResponse);
@@ -624,7 +665,7 @@ const ChatInterface = () => {
         addMessage(userMessage, {
           isJson: false,
           text: '处理音频失败，请稍后重试',
-          messageType: 'text',
+          messageType: 'audio',
           error: true
         });
       } finally {
@@ -753,6 +794,8 @@ const ChatInterface = () => {
       );
     }
     
+    console.log("消息对象:", msg); // 添加调试日志
+    
     // 所有类型都显示雷达图
     return <SystemResponse
       content={msg.content}
@@ -763,6 +806,7 @@ const ChatInterface = () => {
       inputAnalysis={msg.inputAnalysis}
       problemAnalysis={msg.problemAnalysis}
       messageType={msg.messageType || 'text'}
+      chishengscore={msg.chishengscore}
     />;
   };
 
