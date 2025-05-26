@@ -10,7 +10,7 @@ import welcomeIcon from '../assets/語文推廣委員會_有字.png';
 const API_CONFIG = {
   text: 'http://117.50.192.174:8000/ovis_chat',
   image: 'http://117.50.192.174:8000/ovis_chat',
-  audio: 'https://gapsk-plus-api.gapsk.org/scoring/paragraph_scoring/'
+  audio: 'https://gapsk-plus-api.gapsk.org/asr/asr_processor/'
 };
 
 // 默认响应数据
