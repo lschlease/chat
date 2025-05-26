@@ -5,7 +5,7 @@ import SpiderChart from './SpiderChart';
 import EvaluationCard from './EvaluationCard';
 import '../styles/chat.css';
 
-const SystemResponse = ({ content, score, spiderData, showRadarChart = true, error, inputAnalysis, problemAnalysis, messageType }) => {
+const SystemResponse = ({ content, score, chishengscore,spiderData, showRadarChart = true, error, inputAnalysis, problemAnalysis, messageType }) => {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const handlePlayAudio = () => {
@@ -121,6 +121,9 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
         <div className="score-container">
           <div className="score-title">AI 评分</div>
           <div className="score-value">{score}</div>
+
+          <div className="score-title">声音 评分</div>
+          <div className="score-value">{chishengscore}</div>
         </div>
       ):''}
       

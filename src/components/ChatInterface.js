@@ -10,7 +10,8 @@ import welcomeIcon from '../assets/語文推廣委員會_有字.png';
 const API_CONFIG = {
   text: 'http://117.50.192.174:8000/ovis_chat',
   image: 'http://117.50.192.174:8000/ovis_chat',
-  audio: 'https://gapsk-plus-api.gapsk.org/asr/asr_processor/'
+  audio: 'https://gapsk-plus-api.gapsk.org/asr/asr_processor/',
+  chisheng: 'https://gapsk-plus-api.gapsk.org/scoring/paragraph_scoring/'
 };
 
 // 默认响应数据
@@ -37,6 +38,7 @@ const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
   const audioChunks = useRef([]);
+  const [chisheng, setChisheng] = useState(0);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -258,6 +260,7 @@ const ChatInterface = () => {
       if (responseData.messageType === 'text' && responseData.audioData) {
         const data = JSON.parse(responseData.data)
         console.log("data666",data)
+        console.log("chisheng666",chisheng)
         // 处理维度分析数据
         const processDimensionData = (dimension, name) => {
           if (!dimension) return { name, value: 0, content: '暂无数据' };
@@ -305,6 +308,7 @@ const ChatInterface = () => {
             messageType: 'text',
             content: '主观题完成评分',
             score: data?.overall_score,
+            chishengscore:chisheng,
             // inputAnalysis,
             // problemAnalysis,
             spiderData,
@@ -581,6 +585,10 @@ const ChatInterface = () => {
 
         const audioResponse = await request(API_CONFIG.audio, audioFormData);
         console.log("Audio Response:", audioResponse);
+
+        const chishengData = await request(API_CONFIG.chisheng, audioFormData);
+        console.log("chisheng:", chishengData?.data?.data?.overall);
+        setChisheng(chishengData?.data?.data?.overall);
 
         // 然后将音频转换为文字
         const recognizedText = await convertSpeechToText(audioBlob);
