@@ -734,6 +734,7 @@ const ChatInterface = () => {
         </div>
       );
     }
+    
     // 新增：图片类型渲染
     if (msg.imageUrl) {
       return (
@@ -743,7 +744,7 @@ const ChatInterface = () => {
         </div>
       );
     }
-
+    
     // 所有类型都显示雷达图
     return <SystemResponse
       content={msg.content}
@@ -753,6 +754,7 @@ const ChatInterface = () => {
       error={msg.error || false}
       inputAnalysis={msg.inputAnalysis}
       problemAnalysis={msg.problemAnalysis}
+      messageType={msg.messageType || 'text'}
     />;
   };
 

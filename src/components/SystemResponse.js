@@ -5,7 +5,7 @@ import SpiderChart from './SpiderChart';
 import EvaluationCard from './EvaluationCard';
 import '../styles/chat.css';
 
-const SystemResponse = ({ content, score, spiderData, showRadarChart = true, error, inputAnalysis, problemAnalysis }) => {
+const SystemResponse = ({ content, score, spiderData, showRadarChart = true, error, inputAnalysis, problemAnalysis, messageType }) => {
   const [isPlaying, setIsPlaying] = useState(false);
 
   const handlePlayAudio = () => {
@@ -20,6 +20,9 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
       setIsPlaying(true);
     }
   };
+
+  // 根据messageType判断是否显示雷达图，图片类型不显示
+  const shouldShowRadarChart = messageType !== 'image';
 
   // 将数据分组
   const groupData = (data) => {
@@ -91,33 +94,30 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
 
   return (
     <div className="system-message">
-      {/* 错误提示 */}
-      {error && (
+      {!error ? (
+        <>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ margin: 0, flex: 1 }}>{content}</div>
+            {/* 语音播放按钮已隐藏
+            <Button 
+              type="text" 
+              icon={isPlaying ? <PauseOutlined /> : <SoundOutlined />} 
+              onClick={handlePlayAudio}
+              className="primary-button"
+            />
+            */}
+          </div>
+        </>
+      ) : (
         <Alert
-          message="请求异常"
-          description={content || "服务器暂时无法响应，请稍后再试"}
+          message="错误"
+          description={content}
           type="error"
           showIcon
-          style={{ marginBottom: '15px' }}
         />
       )}
       
-      {/* 正常内容 */}
-      {!error && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div style={{ margin: 0, flex: 1 }}>{content}</div>
-          {/* 语音播放按钮已隐藏
-          <Button 
-            type="text" 
-            icon={isPlaying ? <PauseOutlined /> : <SoundOutlined />} 
-            onClick={handlePlayAudio}
-            className="primary-button"
-          />
-          */}
-        </div>
-      )}
-      
-      {score ?  (
+      {score ? (
         <div className="score-container">
           <div className="score-title">AI 评分</div>
           <div className="score-value">{score}</div>
@@ -127,10 +127,12 @@ const SystemResponse = ({ content, score, spiderData, showRadarChart = true, err
       {/* 只有在非错误状态且有数据时才显示图表和数据 */}
       {!error && spiderData && (
         <div style={{ marginTop: 16 }}>
-          {/* 总是显示雷达图，不再根据showRadarChart参数来控制 */}
-          <div className="spider-chart">
-            <SpiderChart data={spiderData} />
-          </div>
+          {/* 只有非图片类型时才显示雷达图 */}
+          {shouldShowRadarChart && (
+            <div className="spider-chart">
+              <SpiderChart data={spiderData} />
+            </div>
+          )}
           
           {/* 音频类型的内容 */}
           {groupedData.audioData && (
