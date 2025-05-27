@@ -601,13 +601,17 @@ const ChatInterface = () => {
       try {
         // 首先发送到音频接口获取评分
         const audioFormData = new FormData();
+        const audioFormDataChi = new FormData();
         audioFormData.append('word', 'test');
         audioFormData.append('audio_file', wavFile);
 
         const audioResponse = await request(API_CONFIG.audio, audioFormData);
         console.log("Audio Response:", audioResponse);
+        
+        audioFormDataChi.append('word', audioResponse?.data?.data?.text || '');
+        audioFormDataChi.append('audio_file', wavFile);
+        const chishengData = await request(API_CONFIG.chisheng, audioFormDataChi);
 
-        const chishengData = await request(API_CONFIG.chisheng, audioFormData);
         console.log("chisheng:", chishengData?.data?.data?.overall);
         setChisheng(chishengData?.data?.data?.overall);
         

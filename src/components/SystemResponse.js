@@ -168,7 +168,7 @@ const SystemResponse = ({ content, score, chishengscore, spiderData, showRadarCh
           {chishengscore !== undefined && chishengscore !== null ? (
             <Col span={12}>
               <div className="score-container">
-                <div className="score-title">声音评分</div>
+                <div className="score-title">语音评分</div>
                 <div className="score-value">{chishengscore}</div>
               </div>
             </Col>
@@ -221,21 +221,7 @@ const SystemResponse = ({ content, score, chishengscore, spiderData, showRadarCh
               
               <Divider style={{ margin: '20px 0' }} />
               
-              {/* 输入分析模块 - 简化为纯文本显示 */}
-              {inputAnalysis && (
-                <div style={{ marginBottom: 20 }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#ff4d4f' }}>输入分析</h3>
-                  <p>{typeof inputAnalysis === 'string' ? inputAnalysis : (inputAnalysis.text || '')}</p>
-                </div>
-              )}
-              
-              {/* 问题分析模块 - 简化为纯文本显示 */}
-              {problemAnalysis && (
-                <div style={{ marginBottom: 20 }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 'bold', margin: '0 0 10px 0', color: '#ff4d4f' }}>问题分析</h3>
-                  <p>{typeof problemAnalysis === 'string' ? problemAnalysis : (problemAnalysis.summary || '')}</p>
-                </div>
-              )}
+
             </div>
           )}
           
