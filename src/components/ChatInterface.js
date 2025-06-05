@@ -610,15 +610,7 @@ const ChatInterface = () => {
         
         audioFormDataChi.append('word', audioResponse?.data?.data?.text || '');
         audioFormDataChi.append('audio_file', wavFile);
-        const chishengData = await request(API_CONFIG.chisheng, audioFormDataChi);
-
-        console.log("chisheng:", chishengData?.data?.data?.overall);
-        setChisheng(chishengData?.data?.data?.overall);
         
-        // 获取智声评分
-        const chishengScore = chishengData?.data?.data?.overall;
-        console.log("获取到的智声评分:", chishengScore);
-
         // 然后将音频转换为文字
         const recognizedText = await convertSpeechToText(audioBlob);
 
@@ -631,8 +623,20 @@ const ChatInterface = () => {
         };
         textFormData.append('text', JSON.stringify(parms));
 
-        const textResponse = await request(API_CONFIG.text, textFormData);
+        // 同时发送智声评分和文本分析请求
+        const [chishengData, textResponse] = await Promise.all([
+          request(API_CONFIG.chisheng, audioFormDataChi),
+          request(API_CONFIG.text, textFormData)
+        ]);
+
+        console.log("chisheng:", chishengData?.data?.data?.overall);
         console.log("Text Response:", textResponse);
+        
+        setChisheng(chishengData?.data?.data?.overall);
+        
+        // 获取智声评分
+        const chishengScore = chishengData?.data?.data?.overall;
+        console.log("获取到的智声评分:", chishengScore);
 
         // 解析响应数据
         let parsedData;
